@@ -1,0 +1,72 @@
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+enum Role {
+  DEVELOPER
+  DESIGNER
+  PROJECT_MANAGER
+  DATA_SCIENTIST
+  DEVOPS
+  DATA_ANALYST
+  TEAM_LEAD
+  PRODUCT_ANALYST
+  ML_ENGINEER
+  CLOUD_ENGINEER
+  QA_ENGINEER
+  TESTER
+}
+
+model Candidate {
+  id               String            @id @default(uuid())
+  fullName         String
+  email            String            @unique
+  role             Role
+  experienceYears  Float
+  costPerHour      Float
+  availabilityHrs  Float
+  skills           String[]          // List of key skills
+  clusterId        Int?              // Assigned by K-Means
+  fitScore         Float?            // Predicted by Decision Tree
+  embedding        Unsupported("vector(384)")? // PgVector for semantic skill search
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  TeamMember       TeamMember[]
+}
+
+model ProjectRequirement {
+  id               String            @id @default(uuid())
+  title            String
+  budgetLimit      Float
+  requiredRoles    String[]          // e.g. ["DEVELOPER", "DESIGNER"]
+  maxDeadlineWeeks Int
+  minExperience    Float
+  teams            Team[]
+  createdAt        DateTime          @default(now())
+}
+
+model Team {
+  id               String             @id @default(uuid())
+  projectId        String
+  project          ProjectRequirement @relation(fields: [projectId], references: [id])
+  totalCost        Float
+  optimalityScore  Float              // Derived from A* search cost function
+  members          TeamMember[]
+  createdAt        DateTime           @default(now())
+}
+
+model TeamMember {
+  id           String    @id @default(uuid())
+  teamId       String
+  candidateId  String
+  assignedRole String
+  team         Team      @relation(fields: [teamId], references: [id])
+  candidate    Candidate @relation(fields: [candidateId], references: [id])
+}

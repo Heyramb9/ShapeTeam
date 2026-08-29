@@ -1,0 +1,63 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment files (contains secrets)
+.env
+.env.local
+.env.production
+.env*.local
+
+# Prisma generated client
+backend/node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+.env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ML Model files (large binaries - regenerate with train_models.py)
+ml-service/models/*.joblib
+
+# Dataset (large file - keep locally, mount via Docker)
+ShapeTeam_Dataset.xlsx
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+~$*
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+
+# Logs
+logs/
+*.log
+
+# Temp data
+backend/data/
