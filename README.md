@@ -1,155 +1,80 @@
-# 🔮 ShapeTeam — Hybrid AI Workforce Optimization Platform
+# ShapeTeam
 
-> Form the **perfect project team** from a pool of 50,000 candidates using a four-stage hybrid pipeline: **Machine Learning → Symbolic Logic → Candidate Pruning → A\* Search**.
+ShapeTeam (formerly OptiTeam) is a multi-tenant workforce optimization application. It combines organization-scoped employee and project data with explainable, constraint-aware team recommendations.
 
----
+## Local development
 
-## 🏗️ Architecture Overview
+Prerequisite: Node.js 20+.
 
-```
-shapeteam/
-├── docker-compose.yml            # One-command full-stack deployment
-├── train_models.py               # Standalone ML model training script
-├── ShapeTeam_Dataset.xlsx
-│
-├── backend/                      # Node.js + Express API Gateway
-│   ├── prisma/schema.prisma      # PostgreSQL + pgvector schema
-│   └── src/
-│       ├── config/               # Environment configuration
-│       ├── controllers/          # Candidates, Projects, Teams
-│       ├── routes/               # Express route definitions
-│       └── services/             # DB (Prisma + fallback), Redis, ML client
-│
-├── frontend/                     # Next.js 14 App Router UI
-│   └── src/
-│       ├── app/                  # Page and layout components
-│       └── services/api.ts       # Typed API client
-│
-└── ml-service/                   # Python FastAPI Microservice
-    ├── main.py                   # API entry point
-    ├── rules/team_rules.pl       # SWI-Prolog constraint rules
-    └── src/
-        ├── algorithms/
-        │   ├── decision_tree.py  # Regression-based fit scoring
-        │   ├── kmeans_cluster.py # Candidate clustering
-        │   └── a_star_search.py  # Priority-queue team search
-        ├── preprocessing.py      # Feature engineering & embeddings
-        ├── prolog_engine.py      # Pure-Python Prolog interpreter
-        └── config.py             # Path configuration
+```powershell
+npm --prefix backend install
+npm --prefix frontend install
+npm --prefix backend run build
+npm --prefix frontend run build
+npm --prefix backend start
 ```
 
----
+In another terminal:
 
-## ⚡ Optimization Pipeline Stages
-
-| Stage | Component | Description |
-|-------|-----------|-------------|
-| **1** | Decision Tree + K-Means | Predict `fit_score` and assign `cluster_id` per candidate |
-| **2** | Prolog Logic Engine | Filters candidates via `eligible_candidate/3` constraints (cost ≤ budget, exp ≥ min) |
-| **3** | Candidate Pruning | Limits search pool to top ≤5,000 by `fit_score` |
-| **4** | A\* Search | State-space search minimising `f(n) = g(n) + h(n)` to find globally optimal team |
-
----
-
-## 🚀 Quick Start — Local Development (No Docker)
-
-### Prerequisites
-- **Node.js** 20+ and **npm**
-- **Python** 3.10+
-
-### 1. Train ML Models (one-time setup)
-```bash
-# From workspace root
-pip install pandas scikit-learn joblib openpyxl
-python train_models.py
+```powershell
+npm --prefix frontend run dev
 ```
 
-### 2. Start the FastAPI ML Service
-```bash
-cd ml-service
-pip install fastapi uvicorn
-uvicorn main:app --reload --port 8000
+Open http://localhost:3000.
+
+The first local start seeds a demonstration organization. Sign in with:
+
+- Email: `admin@shapeteam.local`
+- Password: `Demo12345!`
+
+Additional demo roles use `hr@shapeteam.local`, `pm@shapeteam.local`, `lead@shapeteam.local`, and `employee@shapeteam.local` with the same password.
+
+After an Organization Admin or HR Manager signs in, ShapeTeam requests an employee dataset when the organization has not imported one yet. The importer accepts `.xlsx`, `.xls`, and `.csv` files up to 20 MB. It recognizes the included `ShapeTeam_Dataset.xlsx` format, validates required columns, removes duplicate employee IDs, replaces previous dataset imports, and maps skills, experience, behavior, availability, workload, project history, and model predictions into organization-scoped workforce profiles. Dataset employees receive non-login internal addresses because the sample workbook does not contain work email addresses.
+
+## Architecture
+
+- `frontend/`: Next.js client, authentication/onboarding, protected role-aware workspace, dashboards, project/team flows, reports, notifications, and settings.
+- `backend/`: Express API, session authentication, permission middleware, organization isolation, audit logging, notifications, analytics, reports, and deterministic team optimization.
+- `backend/prisma/schema.prisma`: production PostgreSQL data model.
+- `backend/data/platform.json`: zero-setup local persistence, created at runtime and excluded from source control.
+- `ml-service/`: optional Python decision-tree/A* service. The backend provides a documented deterministic confidence fallback when a trained model is unavailable.
+
+Business logic is isolated in backend services; UI components use the centralized client in `frontend/src/services/api.ts`.
+
+## Security
+
+- Passwords use Node.js `scrypt` with a unique random salt.
+- Sessions are signed, expiring HMAC tokens.
+- Permissions and organization boundaries are enforced by backend middleware and queries.
+- Authentication endpoints are rate limited.
+- Password reset, verification, and invitation tokens are random, hashed, single-use, and expiring.
+- Team ranking excludes protected personal attributes.
+- Important mutations create organization-scoped audit records.
+
+Set a strong `JWT_SECRET` outside local development. Relevant variables:
+
+| Variable | Default |
+| --- | --- |
+| `PORT` | `5000` |
+| `JWT_SECRET` | local development value |
+| `SESSION_HOURS` | `12` |
+| `FRONTEND_URL` | `http://localhost:3000` |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:5000/api` |
+
+## Main API areas
+
+- `/api/auth/*`: signup, login, logout, verification, invitation acceptance, and password recovery.
+- `/api/users`, `/api/profile`, `/api/departments`, `/api/organization`: workforce and organization management.
+- `/api/projects`, `/api/recommendations`, `/api/teams`: project requirements, ranked alternatives, approvals, feedback, and analysis.
+- `/api/dashboard`, `/api/reports/*`: live metrics plus PDF/CSV previews and exports.
+- `/api/notifications`, `/api/audit-logs`, `/api/ai-configuration`: operational controls and governance.
+
+## Recommendation formula
+
+Role suitability is normalized to 0–100 and uses organization-configurable weights, initially:
+
+```text
+RS(e,r) = 0.30 SM + 0.20 ES + 0.15 BS + 0.15 WS + 0.10 AS + 0.10 DT
 ```
 
-### 3. Start the Express Backend
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-### 4. Start the Next.js Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open **http://localhost:3000** in your browser.
-
----
-
-## 🐳 Full Docker Deployment
-
-> Requires Docker + Docker Compose
-
-```bash
-docker compose up --build
-```
-
-Services will start at:
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
-- **ML Service**: http://localhost:8000
-
----
-
-## 🔌 API Reference
-
-### Express Core API (`localhost:5000`)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/candidates/sync` | Import 50k candidates from Excel |
-| `GET` | `/api/candidates` | List all synced candidates |
-| `POST` | `/api/projects` | Create a project requirement |
-| `GET` | `/api/projects` | List all projects |
-| `POST` | `/api/teams/generate` | Run optimization pipeline & save team |
-
-### FastAPI ML Service (`localhost:8000`)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/ml/train` | Train Decision Tree + K-Means models |
-| `POST` | `/ml/predict-score` | Predict `fit_score` and `cluster_id` |
-| `POST` | `/search/optimize-team` | Full Prolog + A\* team optimization |
-| `GET` | `/health` | ML service health check |
-
----
-
-## 🗄️ Database Schema
-
-The PostgreSQL schema (with `pgvector` extension) stores:
-
-- **Candidate** — skills, experience, cost, fit score, cluster ID, 384-dim vector embedding
-- **ProjectRequirement** — budget, required roles, deadline, min experience
-- **Team** — optimality score, total cost, linked members
-- **TeamMember** — assignment joining candidates to teams with their assigned role
-
-> **Local fallback**: If PostgreSQL is not running, the backend automatically persists data to JSON files in `backend/data/`.
-
----
-
-## 🔧 Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `USE_MOCK_DB` | `true` | Use JSON file storage instead of PostgreSQL |
-| `USE_MOCK_CACHE` | `true` | Use in-memory Map instead of Redis |
-| `DATABASE_URL` | local PG | PostgreSQL connection string |
-| `ML_SERVICE_URL` | `http://localhost:8000` | FastAPI endpoint for ML calls |
-
----
-
-## 📄 License
-MIT
+The engine applies role coverage, employee uniqueness, skill, availability, workload, and team-size constraints before ranking feasible teams. Every result includes score factors, strengths, risks, missing skills, and a suggested action.

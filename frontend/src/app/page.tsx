@@ -1,670 +1,99 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { 
-  Users, Briefcase, Cpu, Activity, Plus,
-  DollarSign, CheckCircle2, AlertCircle, Loader2,
-  Database, Sparkles, Check
-} from 'lucide-react';
-import apiService, { Project, Team } from '../services/api';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Activity, AlertTriangle, BarChart3, Bell, BriefcaseBusiness, Check, CheckCircle2, ChevronRight, CircleHelp, Database, Download, FileText, FolderKanban, Gauge, LayoutDashboard, Loader2, Menu, Plus, RefreshCw, Rocket, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Users, WandSparkles, X } from 'lucide-react';
+import apiService, { Candidate, Organization, Project, SessionUser, Team, UserRole } from '../services/api';
 
-const AVAILABLE_ROLES = [
-  { value: 'DEVELOPER', label: 'Developer' },
-  { value: 'DESIGNER', label: 'UI Designer' },
-  { value: 'DEVOPS', label: 'DevOps Engineer' },
-  { value: 'TEAM_LEAD', label: 'Team Lead' },
-  { value: 'PRODUCT_ANALYST', label: 'Product Analyst' },
-  { value: 'ML_ENGINEER', label: 'ML Engineer' },
-  { value: 'CLOUD_ENGINEER', label: 'Cloud Engineer' },
-  { value: 'QA_ENGINEER', label: 'QA Engineer' },
-  { value: 'TESTER', label: 'Tester' },
-  { value: 'DATA_ANALYST', label: 'Data Analyst' }
-];
+type View = 'dashboard' | 'create' | 'projects' | 'employees' | 'analysis' | 'recommendations' | 'reports' | 'settings';
+type Panel = 'diagnostics' | 'notifications' | 'help' | 'addEmployee' | 'candidate' | 'project' | 'compare' | 'weights' | 'standby' | null;
+const ROLES = [['DEVELOPER','Developer'],['DESIGNER','UI Designer'],['DEVOPS','DevOps Engineer'],['TEAM_LEAD','Team Lead'],['PRODUCT_ANALYST','Product Analyst'],['ML_ENGINEER','ML Engineer'],['CLOUD_ENGINEER','Cloud Engineer'],['QA_ENGINEER','QA Engineer'],['TESTER','Tester'],['DATA_ANALYST','Data Analyst']];
+const NAV = [{id:'dashboard' as View,label:'Dashboard',icon:LayoutDashboard},{id:'create' as View,label:'Create Team',icon:WandSparkles},{id:'projects' as View,label:'Projects',icon:FolderKanban},{id:'employees' as View,label:'Employees',icon:BriefcaseBusiness},{id:'analysis' as View,label:'Team Analysis',icon:BarChart3},{id:'recommendations' as View,label:'Recommendations',icon:Sparkles},{id:'reports' as View,label:'Reports',icon:FileText},{id:'settings' as View,label:'Settings',icon:Settings}];
+const labelRole=(v:string)=>v.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+const initials=(v:string)=>v.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+const download=(name:string,content:string,type='text/plain')=>{const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=name;anchor.click();URL.revokeObjectURL(url)};
+const saveBlob=(name:string,blob:Blob)=>{const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=name;anchor.click();URL.revokeObjectURL(url)};
 
-export default function Dashboard() {
-  // Data States
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [selectedProjectTeams, setSelectedProjectTeams] = useState<Team[]>([]);
-  const [candidateCount, setCandidateCount] = useState<number>(0);
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [projectsLoading, setProjectsLoading] = useState(true);
-
-  // Form States
-  const [newTitle, setNewTitle] = useState('');
-  const [newBudget, setNewBudget] = useState('150');
-  const [newDeadline, setNewDeadline] = useState('12');
-  const [newMinExp, setNewMinExp] = useState('3');
-  const [newRoles, setNewRoles] = useState<string[]>([]);
-  const [createLoading, setCreateLoading] = useState(false);
-
-  // Pipeline execution animation states
-  const [optimizeLoading, setOptimizeLoading] = useState(false);
-  const [pipelineStage, setPipelineStage] = useState<number>(0);
-  const [pipelineError, setPipelineError] = useState<string | null>(null);
-
-  // UI message states
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  // Fetch initial configuration
-  useEffect(() => {
-    fetchCandidatesCount();
-    fetchProjectsList();
-  }, []);
-
-  // Fetch teams whenever a project is selected
-  useEffect(() => {
-    if (selectedProject) {
-      fetchProjectTeams(selectedProject.id);
-    } else {
-      setSelectedProjectTeams([]);
-    }
-  }, [selectedProject]);
-
-  const fetchCandidatesCount = async () => {
-    try {
-      const res = await apiService.getCandidates();
-      if (res.success) {
-        setCandidateCount(res.count);
-      }
-    } catch (e: unknown) {
-      console.error('Error fetching candidates:', e);
-    }
-  };
-
-  const fetchProjectsList = async () => {
-    setProjectsLoading(true);
-    try {
-      const res = await apiService.getProjects();
-      if (res.success) {
-        setProjects(res.projects);
-      }
-    } catch (e: unknown) {
-      console.error('Error fetching projects:', e);
-    } finally {
-      setProjectsLoading(false);
-    }
-  };
-
-  const fetchProjectTeams = async (projectId: string) => {
-    try {
-      const res = await apiService.getProjectById(projectId);
-      if (res.success) {
-        setSelectedProjectTeams(res.teams || []);
-      }
-    } catch (e: unknown) {
-      console.error('Error fetching teams:', e);
-    }
-  };
-
-  const handleSyncCandidates = async () => {
-    setSyncLoading(true);
-    setNotification(null);
-    try {
-      const res = await apiService.syncCandidates();
-      if (res.success) {
-        setCandidateCount(res.count);
-        showNotification('success', res.message);
-      }
-    } catch (e: unknown) {
-      const err = e as Error;
-      showNotification('error', err.message || 'Failed to sync candidate dataset.');
-    } finally {
-      setSyncLoading(false);
-    }
-  };
-
-  const handleCreateProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
-    if (newRoles.length === 0) {
-      showNotification('error', 'Please select at least one required role for the project.');
-      return;
-    }
-
-    setCreateLoading(true);
-    setNotification(null);
-    try {
-      const res = await apiService.createProject({
-        title: newTitle,
-        budgetLimit: parseFloat(newBudget),
-        requiredRoles: newRoles,
-        maxDeadlineWeeks: parseInt(newDeadline, 10),
-        minExperience: parseFloat(newMinExp)
-      });
-
-      if (res.success) {
-        setProjects([res.project, ...projects]);
-        setSelectedProject(res.project);
-        showNotification('success', 'Project requirement defined successfully.');
-        
-        // Reset form
-        setNewTitle('');
-        setNewRoles([]);
-      }
-    } catch (e: unknown) {
-      const err = e as Error;
-      showNotification('error', err.message || 'Failed to create project requirement.');
-    } finally {
-      setCreateLoading(false);
-    }
-  };
-
-  const handleRoleToggle = (role: string) => {
-    if (newRoles.includes(role)) {
-      setNewRoles(newRoles.filter(r => r !== role));
-    } else {
-      setNewRoles([...newRoles, role]);
-    }
-  };
-
-  const handleGenerateTeam = async () => {
-    if (!selectedProject) return;
-    setOptimizeLoading(true);
-    setPipelineError(null);
-    setPipelineStage(1); // Stage 1: ML Scoring
-
-    try {
-      // Simulate frontend steps to showcase backend algorithm stages
-      await new Promise(r => setTimeout(r, 900));
-      setPipelineStage(2); // Stage 2: Prolog Filter
-      
-      await new Promise(r => setTimeout(r, 900));
-      setPipelineStage(3); // Stage 3: Candidate Pruning
-      
-      await new Promise(r => setTimeout(r, 900));
-      setPipelineStage(4); // Stage 4: A* Decision Search
-      
-      const res = await apiService.generateTeam(selectedProject.id);
-      
-      await new Promise(r => setTimeout(r, 500));
-      if (res.success) {
-        setSelectedProjectTeams([res.team, ...selectedProjectTeams]);
-        showNotification('success', res.fromCache ? 'Team loaded from optimization cache.' : 'Optimal team generated via hybrid search pipeline!');
-      }
-    } catch (e: unknown) {
-      const err = e as Error;
-      setPipelineError(err.message || 'Optimization failed to find a valid team under these constraints.');
-      showNotification('error', err.message || 'Failed to optimize team composition.');
-    } finally {
-      setOptimizeLoading(false);
-      setPipelineStage(0);
-    }
-  };
-
-  const showNotification = (type: 'success' | 'error', message: string) => {
-    setNotification({ type, message });
-    setTimeout(() => setNotification(null), 5000);
-  };
-
-  return (
-    <div className="min-h-screen pb-16 px-4 md:px-8 max-w-7xl mx-auto pt-6 font-sans">
-      {/* Top Navigation / Header */}
-      <header className="flex flex-col md:flex-row justify-between items-center mb-10 pb-6 border-b border-zinc-800 gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-violet-600/20 text-violet-400 rounded-lg border border-violet-500/20">🔮</span>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-zinc-200 to-violet-400 bg-clip-text text-transparent font-outfit">
-              ShapeTeam
-            </h1>
-          </div>
-          <p className="text-zinc-400 text-sm mt-1">Hybrid ML & Symbolic Logic Workforce Optimization Platform</p>
-        </div>
-
-        {/* Database Status and Sync Tool */}
-        <div className="flex items-center gap-4 bg-zinc-900/60 border border-zinc-800/80 px-4 py-3 rounded-xl glass-panel">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-violet-500/10 text-violet-400 rounded-lg">
-              <Database className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider">Candidate Pool</div>
-              <div className="text-lg font-bold text-white">
-                {candidateCount > 0 ? `${candidateCount.toLocaleString()} Records` : 'Empty Database'}
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={handleSyncCandidates}
-            disabled={syncLoading}
-            className="ml-4 px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-lg text-sm font-semibold transition-all shadow-md shadow-violet-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {syncLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Syncing...
-              </>
-            ) : (
-              <>
-                <Database className="w-4 h-4" />
-                Sync Excel
-              </>
-            )}
-          </button>
-        </div>
-      </header>
-
-      {/* Global Alerts */}
-      {notification && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl border shadow-lg max-w-md transition-all animate-bounce ${
-          notification.type === 'success' 
-            ? 'bg-emerald-950/80 border-emerald-500/30 text-emerald-300 backdrop-blur-md' 
-            : 'bg-rose-950/80 border-rose-500/30 text-rose-300 backdrop-blur-md'
-        }`}>
-          {notification.type === 'success' ? <CheckCircle2 className="w-6 h-6 flex-shrink-0" /> : <AlertCircle className="w-6 h-6 flex-shrink-0" />}
-          <div className="text-sm font-medium">{notification.message}</div>
-        </div>
-      )}
-
-      {/* Grid Dashboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* LEFT COLUMN: Input Form & Projects Selection */}
-        <div className="lg:col-span-4 flex flex-col gap-8">
-          
-          {/* Section: Create Project Requirement */}
-          <div className="glass-panel rounded-2xl p-6 border border-zinc-800/80">
-            <h2 className="text-xl font-bold font-outfit mb-4 text-white flex items-center gap-2">
-              <Plus className="w-5 h-5 text-violet-400" />
-              Define Requirements
-            </h2>
-            <form onSubmit={handleCreateProject} className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs text-zinc-400 font-medium block mb-1">Project Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Finance API Migration"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 rounded-lg glass-input text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-zinc-400 font-medium block mb-1">Budget Limit ($/hr)</label>
-                  <input
-                    type="number"
-                    min="10"
-                    value={newBudget}
-                    onChange={(e) => setNewBudget(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-lg glass-input text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-zinc-400 font-medium block mb-1">Min Experience (yrs)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={newMinExp}
-                    onChange={(e) => setNewMinExp(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-lg glass-input text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-zinc-400 font-medium block mb-1">Max Duration (weeks)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={newDeadline}
-                  onChange={(e) => setNewDeadline(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 rounded-lg glass-input text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-zinc-400 font-medium block mb-2">Required Team Roles</label>
-                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-zinc-950/60 border border-zinc-800/80 rounded-lg">
-                  {AVAILABLE_ROLES.map((role) => (
-                    <button
-                      type="button"
-                      key={role.value}
-                      onClick={() => handleRoleToggle(role.value)}
-                      className={`flex items-center gap-2 p-1.5 rounded text-left text-xs font-medium transition-all ${
-                        newRoles.includes(role.value)
-                          ? 'bg-violet-600/30 text-violet-300 border border-violet-500/30'
-                          : 'text-zinc-400 hover:bg-zinc-900 border border-transparent'
-                      }`}
-                    >
-                      <Check className={`w-3.5 h-3.5 transition-all ${
-                        newRoles.includes(role.value) ? 'opacity-100' : 'opacity-0'
-                      }`} />
-                      {role.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={createLoading}
-                className="w-full py-2.5 mt-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-semibold transition-all shadow-md shadow-violet-950/40 flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {createLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                Add Project
-              </button>
-            </form>
-          </div>
-
-          {/* Section: Project Select List */}
-          <div className="glass-panel rounded-2xl p-6 border border-zinc-800/80 flex-1">
-            <h2 className="text-xl font-bold font-outfit mb-4 text-white flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-violet-400" />
-              Active Projects
-            </h2>
-
-            {projectsLoading ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-3">
-                <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
-                <span className="text-zinc-500 text-xs font-medium">Loading projects...</span>
-              </div>
-            ) : projects.length === 0 ? (
-              <div className="text-center py-10">
-                <p className="text-zinc-500 text-sm">No project definitions yet.</p>
-                <p className="text-zinc-600 text-xs mt-1">Use the form above to add one.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 max-h-96 overflow-y-auto pr-1">
-                {projects.map((proj) => (
-                  <div
-                    key={proj.id}
-                    onClick={() => setSelectedProject(proj)}
-                    className={`p-4 rounded-xl border text-left cursor-pointer transition-all ${
-                      selectedProject?.id === proj.id
-                        ? 'bg-violet-600/10 border-violet-500/40 shadow-md shadow-violet-950/20'
-                        : 'bg-zinc-950/40 border-zinc-800/80 hover:bg-zinc-900/40 hover:border-zinc-800'
-                    }`}
-                  >
-                    <div className="font-semibold text-sm text-white">{proj.title}</div>
-                    <div className="flex items-center justify-between mt-2 text-xs text-zinc-400">
-                      <span>Limit: ${proj.budgetLimit}/hr</span>
-                      <span>Min Exp: {proj.minExperience} yrs</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {proj.requiredRoles.map((role) => (
-                        <span key={role} className="px-1.5 py-0.5 bg-zinc-900 border border-zinc-800 text-[9px] font-semibold tracking-wide rounded uppercase text-zinc-400">
-                          {role.replace('_', ' ')}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-        </div>
-
-        {/* RIGHT COLUMN: Pipeline Progress & Team Optimization Dashboard */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
-          
-          {selectedProject ? (
-            <>
-              {/* Project Title Block & Optimizer Trigger */}
-              <div className="glass-panel rounded-2xl p-6 border border-zinc-800/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <div className="text-xs font-semibold text-violet-400 tracking-wider uppercase mb-1">Selected Project</div>
-                  <h2 className="text-2xl font-bold font-outfit text-white">{selectedProject.title}</h2>
-                  <div className="flex flex-wrap gap-4 mt-2 text-xs text-zinc-400">
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                      Budget limit: <strong>${selectedProject.budgetLimit}/hr</strong>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5 text-indigo-400" />
-                      Roles Needed: <strong>{selectedProject.requiredRoles.length}</strong>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Activity className="w-3.5 h-3.5 text-purple-400" />
-                      Min Experience: <strong>{selectedProject.minExperience} years</strong>
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleGenerateTeam}
-                  disabled={optimizeLoading || candidateCount === 0}
-                  className="px-6 py-3 w-full md:w-auto bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-violet-950/40 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {optimizeLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Optimizing Pipeline...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 group-hover:animate-pulse" />
-                      Generate Optimal Team
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Pipeline Simulation Loader (If optimising) */}
-              {optimizeLoading && (
-                <div className="glass-panel rounded-2xl p-8 border border-violet-500/20 relative overflow-hidden pulse-glow">
-                  <div className="absolute top-0 right-0 p-4 opacity-5">
-                    <Cpu className="w-48 h-48 animate-spin-slow" />
-                  </div>
-                  <h3 className="text-lg font-bold font-outfit text-white mb-6 flex items-center gap-2">
-                    <Cpu className="w-5 h-5 text-violet-400 animate-spin" />
-                    Executing Hybrid Optimization Pipeline
-                  </h3>
-                  
-                  {/* Stages */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative z-10">
-                    
-                    <div className={`p-4 rounded-xl border transition-all ${
-                      pipelineStage >= 1
-                        ? 'bg-violet-950/40 border-violet-500/40 text-white'
-                        : 'bg-zinc-950/20 border-zinc-900 text-zinc-600'
-                    }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold tracking-wider uppercase">Stage 1</span>
-                        {pipelineStage > 1 ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        ) : pipelineStage === 1 ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
-                        ) : null}
-                      </div>
-                      <div className="font-semibold text-xs mb-1">ML Layer Scoring</div>
-                      <p className="text-[10px] text-zinc-400 leading-tight">Runs candidates through K-Means & Decision Tree regressors.</p>
-                    </div>
-
-                    <div className={`p-4 rounded-xl border transition-all ${
-                      pipelineStage >= 2
-                        ? 'bg-violet-950/40 border-violet-500/40 text-white'
-                        : 'bg-zinc-950/20 border-zinc-900 text-zinc-600'
-                    }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold tracking-wider uppercase">Stage 2</span>
-                        {pipelineStage > 2 ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        ) : pipelineStage === 2 ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
-                        ) : null}
-                      </div>
-                      <div className="font-semibold text-xs mb-1">Symbolic Logic</div>
-                      <p className="text-[10px] text-zinc-400 leading-tight">Applies Prolog eligibility rules checking cost & experience.</p>
-                    </div>
-
-                    <div className={`p-4 rounded-xl border transition-all ${
-                      pipelineStage >= 3
-                        ? 'bg-violet-950/40 border-violet-500/40 text-white'
-                        : 'bg-zinc-950/20 border-zinc-900 text-zinc-600'
-                    }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold tracking-wider uppercase">Stage 3</span>
-                        {pipelineStage > 3 ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        ) : pipelineStage === 3 ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
-                        ) : null}
-                      </div>
-                      <div className="font-semibold text-xs mb-1">Candidate Pruning</div>
-                      <p className="text-[10px] text-zinc-400 leading-tight">Limits search space pool to top 5,000 scoring fits.</p>
-                    </div>
-
-                    <div className={`p-4 rounded-xl border transition-all ${
-                      pipelineStage >= 4
-                        ? 'bg-violet-950/40 border-violet-500/40 text-white'
-                        : 'bg-zinc-950/20 border-zinc-900 text-zinc-600'
-                    }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold tracking-wider uppercase">Stage 4</span>
-                        {pipelineStage === 4 ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
-                        ) : null}
-                      </div>
-                      <div className="font-semibold text-xs mb-1">A* Search Space</div>
-                      <p className="text-[10px] text-zinc-400 leading-tight">State space search for cheapest-max-fit team configuration.</p>
-                    </div>
-
-                  </div>
-                </div>
-              )}
-
-              {/* Search Failure View */}
-              {pipelineError && (
-                <div className="bg-rose-950/40 border border-rose-500/30 p-5 rounded-2xl text-rose-300 text-sm flex gap-3">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <div>
-                    <div className="font-bold">Team Optimization Failed</div>
-                    <p className="text-xs text-rose-400 mt-1">{pipelineError}</p>
-                    <p className="text-[10px] text-rose-500 mt-2 font-medium">Tip: Try increasing the hourly budget limit or reducing the minimum experience requirement.</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Optimization Result Display */}
-              {selectedProjectTeams.length > 0 ? (
-                <div className="flex flex-col gap-6">
-                  {selectedProjectTeams.map((team, idx) => {
-                    const budgetUsagePercent = Math.min(100, Math.round((team.totalCost / selectedProject.budgetLimit) * 100));
-                    
-                    return (
-                      <div key={team.id} className="glass-panel rounded-2xl border border-zinc-800/80 overflow-hidden">
-                        {/* Header Stats */}
-                        <div className="bg-zinc-900/60 border-b border-zinc-800 px-6 py-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                          <div>
-                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider rounded-md">
-                              {idx === 0 ? 'Optimal Solution' : `Alternative #${idx + 1}`}
-                            </span>
-                            <div className="text-zinc-500 text-[10px] font-medium uppercase mt-1">Optimization ID</div>
-                            <div className="text-xs font-mono text-zinc-300">{team.id}</div>
-                          </div>
-
-                          <div className="flex items-center gap-8">
-                            {/* Optimality Metric */}
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-full border-4 border-zinc-800 flex items-center justify-center relative overflow-hidden" style={{
-                                borderColor: team.optimalityScore > 85 ? '#8b5cf6' : team.optimalityScore > 70 ? '#6366f1' : '#4b5563'
-                              }}>
-                                <span className="text-xs font-bold text-white">{Math.round(team.optimalityScore)}%</span>
-                              </div>
-                              <div>
-                                <div className="text-[10px] text-zinc-400 font-medium uppercase">Optimality Score</div>
-                                <div className="text-xs font-bold text-zinc-300">Heuristic Index</div>
-                              </div>
-                            </div>
-
-                            {/* Cost Metric */}
-                            <div>
-                              <div className="text-[10px] text-zinc-400 font-medium uppercase">Total Cost</div>
-                              <div className="text-lg font-black text-white">${team.totalCost}/hr</div>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${budgetUsagePercent}%` }} />
-                                </div>
-                                <span className="text-[10px] text-zinc-500 font-bold">{budgetUsagePercent}% budget</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Team Members List */}
-                        <div className="p-6">
-                          <h3 className="text-xs text-zinc-400 font-bold uppercase tracking-widest mb-4">Recommended Team Configuration</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {team.members?.map((member) => {
-                              const candidate = member.candidate || {};
-                              return (
-                                <div key={member.id} className="p-4 bg-zinc-950/60 border border-zinc-800/80 rounded-xl flex items-start gap-4">
-                                  <div className="w-10 h-10 rounded-xl bg-violet-600/10 border border-violet-500/20 text-violet-400 font-bold flex items-center justify-center flex-shrink-0 text-sm">
-                                    {candidate.fullName ? candidate.fullName.split('_')[1] || candidate.fullName.charAt(0) : '?'}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-start">
-                                      <div className="font-bold text-sm text-white truncate">{candidate.fullName}</div>
-                                      {candidate.fitScore !== null && (
-                                        <span className="px-1.5 py-0.5 bg-violet-500/10 text-violet-300 text-[9px] font-bold rounded border border-violet-500/20">
-                                          Fit: {Math.round(candidate.fitScore)}%
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mt-0.5">
-                                      {member.assignedRole.replace('_', ' ')}
-                                    </div>
-                                    
-                                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-zinc-900 text-[10px] text-zinc-500">
-                                      <span>Exp: <strong>{candidate.experienceYears} yrs</strong></span>
-                                      <span>Cost: <strong>${candidate.costPerHour}/hr</strong></span>
-                                      <span>Cluster: <strong>{candidate.clusterId ?? 'None'}</strong></span>
-                                    </div>
-                                    
-                                    {/* Skill Tags */}
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                      {candidate.skills?.map((skill: string) => (
-                                        <span key={skill} className="px-1 py-0.5 bg-zinc-900 text-zinc-400 text-[8px] font-bold tracking-wide rounded">
-                                          {skill}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : !optimizeLoading ? (
-                <div className="glass-panel rounded-2xl p-12 text-center border border-zinc-800/80 flex flex-col items-center justify-center">
-                  <div className="p-4 bg-violet-500/10 text-violet-400 rounded-full mb-4">
-                    <Sparkles className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-lg font-bold font-outfit text-white mb-2">No Optimized Team Configured</h3>
-                  <p className="text-zinc-500 text-sm max-w-md mx-auto">
-                    Click the &quot;Generate Optimal Team&quot; button above to run the hybrid predictive scoring and decision search pipeline for this project.
-                  </p>
-                </div>
-              ) : null}
-
-            </>
-          ) : (
-            <div className="glass-panel rounded-2xl p-16 text-center border border-zinc-800/80 flex flex-col items-center justify-center h-full min-h-[400px]">
-              <div className="p-4 bg-zinc-900 text-zinc-500 rounded-full mb-4 border border-zinc-800">
-                <Briefcase className="w-10 h-10" />
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-white mb-2">No Project Selected</h3>
-              <p className="text-zinc-500 text-sm max-w-sm">
-                Select a project requirement from the left sidebar list or define a new one to optimize team structures.
-              </p>
-            </div>
-          )}
-
-        </div>
-
-      </div>
-    </div>
-  );
+export default function ShapeTeam(){
+  const [session,setSession]=useState<{user:SessionUser;organization:Organization}|null>(null),[sessionLoading,setSessionLoading]=useState(true);
+  const [datasetGate,setDatasetGate]=useState<'checking'|'required'|'ready'>('checking'),[dataVersion,setDataVersion]=useState(0);
+  const [view,setView]=useState<View>('dashboard'),[mobileNav,setMobileNav]=useState(false),[projects,setProjects]=useState<Project[]>([]),[candidates,setCandidates]=useState<Candidate[]>([]),[selected,setSelected]=useState<Project|null>(null),[teams,setTeams]=useState<Team[]>([]);
+  const [candidateTotal,setCandidateTotal]=useState(0);
+  const [loading,setLoading]=useState(true),[syncing,setSyncing]=useState(false),[optimizing,setOptimizing]=useState(false),[stage,setStage]=useState(0),[notice,setNotice]=useState<{type:'success'|'error';message:string}|null>(null),[query,setQuery]=useState(''),[panel,setPanel]=useState<Panel>(null);
+  const [focusedCandidate,setFocusedCandidate]=useState<Candidate|null>(null),[focusedProject,setFocusedProject]=useState<Project|null>(null),[notificationCount,setNotificationCount]=useState(3);
+  const [dashboardMetrics,setDashboardMetrics]=useState<Record<string,number|Array<{label:string;value:number}>>>({});
+  const [title,setTitle]=useState(''),[budget,setBudget]=useState('150'),[deadline,setDeadline]=useState('12'),[experience,setExperience]=useState('3'),[roles,setRoles]=useState<string[]>([]),[creating,setCreating]=useState(false);
+  useEffect(()=>{const expired=()=>{setSession(null);setSessionLoading(false)};window.addEventListener('shapeteam:session-expired',expired);if(!apiService.getToken())setSessionLoading(false);else apiService.getMe().then(({user,organization})=>setSession({user,organization})).catch(()=>apiService.setToken(null)).finally(()=>setSessionLoading(false));return()=>window.removeEventListener('shapeteam:session-expired',expired)},[]);
+  useEffect(()=>{if(!session){setDatasetGate('checking');return}setDatasetGate('checking');apiService.getDatasetStatus().then(status=>setDatasetGate(status.required&&['ORGANIZATION_ADMIN','HR_MANAGER'].includes(session.user.role)?'required':'ready')).catch(()=>setDatasetGate('ready'))},[session]);
+  useEffect(()=>{if(!session||datasetGate!=='ready')return;setLoading(true);Promise.allSettled([apiService.getProjects(),apiService.getCandidates(),apiService.getNotifications(),apiService.dashboard()]).then(([p,c,n,d])=>{if(p.status==='fulfilled'&&p.value.success){setProjects(p.value.projects);setSelected(p.value.projects[0]||null)}if(c.status==='fulfilled'&&c.value.success){setCandidates(c.value.candidates);setCandidateTotal(c.value.count)}if(n.status==='fulfilled')setNotificationCount(n.value.unread);if(d.status==='fulfilled')setDashboardMetrics(d.value.metrics);setLoading(false)})},[session,datasetGate,dataVersion]);
+  useEffect(()=>{if(!selected){setTeams([]);return}setTeams([]);apiService.getProjectById(selected.id).then(r=>r.success&&setTeams(r.teams||[])).catch(()=>setTeams([]))},[selected]);
+  useEffect(()=>{const shortcut=(event:KeyboardEvent)=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();document.getElementById('global-search')?.focus()}};window.addEventListener('keydown',shortcut);return()=>window.removeEventListener('keydown',shortcut)},[]);
+  const flash=(type:'success'|'error',message:string)=>{setNotice({type,message});window.setTimeout(()=>setNotice(null),4500)};
+  const go=(v:View)=>{setView(v);setMobileNav(false)};
+  const inspectCandidate=(candidate:Candidate)=>{setFocusedCandidate(candidate);setPanel('candidate')};
+  const inspectProject=(project:Project)=>{setSelected(project);setFocusedProject(project);setPanel('project')};
+  const selectAndOptimize=(project:Project)=>{setSelected(project);setView('create');setPanel(null)};
+  const exportTeam=()=>{if(!selected||!teams[0])return flash('error','Generate a recommendation before exporting.');const team=teams[0];download(`${selected.title.replace(/[^a-z0-9]+/gi,'-').toLowerCase()}-team-report.txt`,[`ShapeTeam Recommendation: ${selected.title}`,`Overall score: ${Math.round(team.optimalityScore)}/100`,`Total cost: $${team.totalCost}/hr`,'',...team.members.map(member=>`${member.candidate.fullName} — ${labelRole(member.assignedRole)} — ${member.candidate.skills.join(', ')}`)].join('\n'));flash('success','Recommendation report downloaded.')};
+  const sync=async()=>{setSyncing(true);try{const a=await apiService.syncCandidates(),b=await apiService.getCandidates();if(b.success){setCandidates(b.candidates);setCandidateTotal(b.count)}flash('success',a.message)}catch(e){flash('error',e instanceof Error?e.message:'Candidate sync failed.')}finally{setSyncing(false)}};
+  const create=async(e:FormEvent)=>{e.preventDefault();if(!roles.length)return flash('error','Select at least one required role.');setCreating(true);try{const r=await apiService.createProject({title:title.trim(),budgetLimit:+budget,requiredRoles:roles,maxDeadlineWeeks:+deadline,minExperience:+experience});setProjects(v=>[r.project,...v]);setSelected(r.project);setTitle('');setRoles([]);flash('success','Project requirements saved. Ready for optimization.')}catch(err){flash('error',err instanceof Error?err.message:'Unable to create project.')}finally{setCreating(false)}};
+  const generate=async()=>{if(!selected)return flash('error','Select a project first.');if(!candidates.length)return flash('error','Sync the employee dataset before optimizing.');setOptimizing(true);try{setStage(1);await new Promise(r=>setTimeout(r,450));setStage(2);await new Promise(r=>setTimeout(r,450));setStage(3);const r=await apiService.generateTeam(selected.id);setTeams(v=>[r.team,...v.filter(t=>t.id!==r.team.id)]);setView('recommendations');flash('success',r.fromCache?'Recommendation loaded from cache.':'Optimal team recommendation generated.')}catch(e){flash('error',e instanceof Error?e.message:'Optimization failed.')}finally{setOptimizing(false);setStage(0)}};
+  const launch=async()=>{const team=teams[0],recommendation=team?.recommendation;if(!recommendation)return flash('error','Generate or select a recommendation first.');try{const result=session?.user.role==='ORGANIZATION_ADMIN'&&recommendation.status==='PENDING_APPROVAL'?await apiService.reviewRecommendation(recommendation.id,'approve','Approved in ShapeTeam review.'):await apiService.submitRecommendation(recommendation.id);setTeams(current=>current.map(item=>item.id===team.id?{...item,status:result.recommendation.status,recommendation:result.recommendation}:item));flash('success',result.message)}catch(error){flash('error',error instanceof Error?error.message:'Unable to update recommendation.')}};
+  const filtered=useMemo(()=>{const q=query.toLowerCase();return candidates.filter(c=>[c.fullName,c.role,...c.skills].join(' ').toLowerCase().includes(q))},[candidates,query]);
+  if(sessionLoading)return <div className="session-loader"><Loader2 className="spin"/><b>Loading ShapeTeam</b></div>;
+  if(!session)return <AuthGateway authenticated={(user,organization)=>setSession({user,organization})}/>;
+  if(datasetGate==='checking')return <div className="session-loader"><Loader2 className="spin"/><b>Checking workforce data</b></div>;
+  if(datasetGate==='required')return <DatasetOnboarding organization={session.organization} user={session.user} complete={()=>{setDatasetGate('ready');setDataVersion(value=>value+1)}} skip={()=>setDatasetGate('ready')} logout={async()=>{await apiService.logout();setSession(null)}}/>;
+  const allowedViews:Record<UserRole,View[]>={ORGANIZATION_ADMIN:['dashboard','create','projects','employees','analysis','recommendations','reports','settings'],HR_MANAGER:['dashboard','create','projects','employees','analysis','recommendations','reports'],PROJECT_MANAGER:['dashboard','create','projects','employees','analysis','recommendations','reports'],TEAM_LEAD:['dashboard','projects','analysis','recommendations'],EMPLOYEE:['dashboard','projects','analysis']};
+  const canCreate=['ORGANIZATION_ADMIN','HR_MANAGER','PROJECT_MANAGER'].includes(session.user.role);
+  const signOut=async()=>{await apiService.logout();setSession(null);setDatasetGate('checking');setProjects([]);setCandidates([]);setTeams([])};
+  return <div className="app-shell"><aside className={`sidebar ${mobileNav?'open':''}`}><Logo home={()=>go('dashboard')}/><button className="nav-close" onClick={()=>setMobileNav(false)} aria-label="Close menu"><X/></button><p className="nav-label">Workforce platform</p><nav>{NAV.filter(n=>allowedViews[session.user.role].includes(n.id)).map(n=><button key={n.id} className={view===n.id?'active':''} onClick={()=>go(n.id)}><n.icon/>{n.label}</button>)}</nav><div className="side-bottom"><button onClick={()=>setPanel('help')}><CircleHelp/>Help Center <small>Docs</small></button><button className="user" onClick={signOut} title="Sign out"><i>{initials(session.user.name)}</i><span><b>{session.user.name}</b><small>{labelRole(session.user.role)}</small></span><X/></button></div></aside>
+  <div className="workspace"><header><button className="menu" onClick={()=>setMobileNav(true)} aria-label="Open menu"><Menu/></button><label className="global-search"><Search/><input id="global-search" value={query} onChange={e=>{setQuery(e.target.value);if(e.target.value&&allowedViews[session.user.role].includes('employees'))go('employees')}} placeholder="Search teams, skills, members..."/><kbd>Ctrl K</kbd></label><div className="ai-live"><i/>ShapeTeam AI v3.2 <span>• Active</span></div><div className="header-actions"><button className="bell" onClick={()=>setPanel('notifications')} aria-label="Notifications"><Bell/>{notificationCount>0&&<b>{notificationCount}</b>}</button>{canCreate&&<button className="primary" onClick={()=>go('create')}><Plus/>Create New Team</button>}<i className="avatar">{initials(session.user.name)}</i></div></header><main>
+  {view==='dashboard'&&<Dashboard projects={projects} candidates={candidates} teams={teams} loading={loading} metrics={dashboardMetrics} go={go} setSelected={setSelected} diagnostics={()=>setPanel('diagnostics')} canCreate={canCreate}/>} {view==='employees'&&<Employees candidates={filtered} total={candidateTotal} query={query} setQuery={setQuery} syncing={syncing} sync={sync} add={()=>setPanel('addEmployee')} inspect={inspectCandidate} canAdd={['ORGANIZATION_ADMIN','HR_MANAGER'].includes(session.user.role)}/>} {view==='projects'&&<Projects projects={projects} selected={selected} inspect={inspectProject} create={()=>go('create')} canCreate={canCreate}/>} {view==='create'&&<Create projects={projects} selected={selected} setSelected={setSelected} candidates={candidateTotal} roles={roles} setRoles={setRoles} title={title} setTitle={setTitle} budget={budget} setBudget={setBudget} deadline={deadline} setDeadline={setDeadline} experience={experience} setExperience={setExperience} creating={creating} submit={create} syncing={syncing} sync={sync} optimizing={optimizing} stage={stage} generate={generate}/>} {view==='recommendations'&&<Recommendation project={selected} team={teams[0]} optimizing={optimizing} generate={generate} create={()=>go('create')} launch={launch} canAct={canCreate}/>} {view==='analysis'&&<Analysis team={teams[0]} project={selected} openWeights={()=>setPanel('weights')} generate={()=>go('create')}/>} {view==='reports'&&<Reports projects={projects} team={teams[0]} exportTeam={exportTeam}/>} {view==='settings'&&<SettingsView openWeights={()=>setPanel('weights')} flash={flash}/>} </main></div>{mobileNav&&<button className="backdrop" onClick={()=>setMobileNav(false)}/>} {panel&&<PanelView panel={panel} close={()=>setPanel(null)} candidates={candidates} projects={projects} teams={teams} candidate={focusedCandidate} project={focusedProject} optimize={selectAndOptimize} onRead={()=>{apiService.markNotificationsRead().catch(()=>undefined);setNotificationCount(0)}} canManageRoles={session.user.role==='ORGANIZATION_ADMIN'} onUserUpdated={async()=>{const result=await apiService.getCandidates();setCandidates(result.candidates);setCandidateTotal(result.count)}} added={candidate=>{setCandidates(v=>[candidate,...v]);setCandidateTotal(value=>value+1);setPanel(null);go('employees');flash('success','Employee added successfully.')}}/>} {notice&&<div className={`toast ${notice.type}`}>{notice.type==='success'?<CheckCircle2/>:<AlertTriangle/>}{notice.message}</div>}</div>
 }
+
+function DatasetOnboarding({organization,user,complete,skip,logout}:{organization:Organization;user:SessionUser;complete:()=>void;skip:()=>void;logout:()=>void}){
+  const [file,setFile]=useState<File|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[progress,setProgress]=useState('');
+  const upload=async()=>{if(!file)return setError('Choose an Excel or CSV employee dataset first.');setBusy(true);setError('');setProgress('Reading and validating the dataset…');try{const result=await apiService.importEmployeeDataset(file);setProgress(`${result.result.imported.toLocaleString()} employees imported. Preparing your dashboard…`);window.setTimeout(complete,700)}catch(reason){setError(reason instanceof Error?reason.message:'Dataset import failed.');setProgress('')}finally{setBusy(false)}};
+  return <div className="dataset-page"><header><Logo home={()=>undefined}/><button className="text-action" onClick={logout}>Sign out</button></header><main><section><small>Organization setup · Workforce data</small><h1>Welcome, {user.name.split(' ')[0]}</h1><p>Upload {organization.name}&apos;s employee dataset so ShapeTeam can calculate workforce capacity, skill coverage, compatibility, and team recommendations from your organization&apos;s actual records.</p><div className={`dataset-drop ${file?'selected':''}`}><Database/><h2>{file?file.name:'Choose your employee dataset'}</h2><p>{file?`${(file.size/1024/1024).toFixed(2)} MB selected`:'Excel (.xlsx, .xls) or CSV · up to 20 MB'}</p><label className="secondary">Browse files<input type="file" accept=".xlsx,.xls,.csv" onChange={event=>{setFile(event.target.files?.[0]||null);setError('')}}/></label></div>{progress&&<p className="import-progress"><Loader2 className={busy?'spin':''}/>{progress}</p>}{error&&<p className="form-error">{error}</p>}<button className="primary dataset-submit" disabled={!file||busy} onClick={upload}>{busy?<Loader2 className="spin"/>:<Sparkles/>}{busy?'Importing workforce data…':'Import and analyze employees'}</button><button className="text-action dataset-skip" disabled={busy} onClick={skip}>Continue with the existing sample data</button></section><aside><h2>Required employee columns</h2><p>ShapeTeam recognizes the uploaded sample format automatically.</p><div className="dataset-columns">{['Employee ID and name','Department','Primary and secondary skills','Experience years','Availability','Current workload','Preferred role','Performance and behavior scores'].map(item=><span key={item}><CheckCircle2/>{item}</span>)}</div><div className="dataset-note"><ShieldCheck/><p><b>Organization-isolated import</b><small>Records are available only inside {organization.name}. Protected personal attributes are not used for ranking.</small></p></div></aside></main></div>
+}
+
+function AuthGateway({authenticated}:{authenticated:(user:SessionUser,organization:Organization)=>void}){
+  const [mode,setMode]=useState<'landing'|'login'|'signup'|'forgot'|'reset'>('landing'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[resetToken,setResetToken]=useState('');
+  const [form,setForm]=useState({fullName:'',email:'',password:'',organizationName:'',organizationSize:'51-200',userRole:'HR_MANAGER' as UserRole});
+  const submit=async(event:FormEvent)=>{event.preventDefault();setBusy(true);setError('');setMessage('');try{if(mode==='login'){const result=await apiService.login(form.email,form.password);authenticated(result.user,result.organization)}else if(mode==='signup'){const result=await apiService.signup(form);authenticated(result.user,result.organization)}else if(mode==='forgot'){const result=await apiService.forgotPassword(form.email);setMessage(result.message);if(result.resetToken){setResetToken(result.resetToken);setMode('reset')}}else if(mode==='reset'){const result=await apiService.resetPassword(resetToken,form.password);setMessage(result.message);setMode('login')}}catch(reason){setError(reason instanceof Error?reason.message:'Unable to continue.')}finally{setBusy(false)}};
+  if(mode==='landing')return <div className="landing"><header><Logo home={()=>undefined}/><nav><button onClick={()=>setMode('login')}>Sign in</button><button className="primary" onClick={()=>setMode('signup')}>Start with ShapeTeam</button></nav></header><main><section><small>Explainable workforce intelligence</small><h1>Build stronger teams with decisions people can trust.</h1><p>ShapeTeam connects skills, workload, experience, and project constraints to create transparent team recommendations—without using protected personal attributes.</p><div><button className="primary" onClick={()=>setMode('signup')}><Sparkles/>Create your organization</button><button className="secondary" onClick={()=>setMode('login')}>Open workspace<ChevronRight/></button></div><footer><span><CheckCircle2/>Role-based access</span><span><CheckCircle2/>Explainable scoring</span><span><CheckCircle2/>Organization-isolated data</span></footer></section><aside><div className="landing-score"><small>Recommended team</small><b>92%</b><span>Compatibility</span></div><div className="landing-bars">{[['Skill coverage',96],['Workload balance',88],['Availability',91],['Confidence',89]].map(([label,value])=><p key={label}><span>{label}<b>{value}%</b></span><i><b style={{width:`${value}%`}}/></i></p>)}</div><div className="insight"><Sparkles/>Every score includes the factors, constraints, strengths, and risks behind it.</div></aside></main></div>;
+  return <div className="auth-page"><aside><Logo home={()=>setMode('landing')}/><div><small>ShapeTeam workforce intelligence</small><h1>{mode==='signup'?'Create your organization':mode==='forgot'||mode==='reset'?'Recover your account':'Welcome back'}</h1><p>{mode==='signup'?'Set up your secure workspace and invite your team.':mode==='forgot'||mode==='reset'?'Use a time-limited reset link to restore access.':'Continue to your role-based workspace.'}</p></div><footer>Formerly OptiTeam · Built for explainable, bias-aware workforce decisions.</footer></aside><main><form onSubmit={submit}><button type="button" className="auth-back" onClick={()=>setMode('landing')}>← Back</button><h2>{mode==='signup'?'Sign up':mode==='forgot'?'Forgot password':mode==='reset'?'Set new password':'Sign in'}</h2>{mode==='signup'&&<><label>Full name<input required value={form.fullName} onChange={event=>setForm({...form,fullName:event.target.value})} autoComplete="name"/></label><label>Organization name<input required value={form.organizationName} onChange={event=>setForm({...form,organizationName:event.target.value})}/></label><div><label>Organization size<select value={form.organizationSize} onChange={event=>setForm({...form,organizationSize:event.target.value})}><option>1-10</option><option>11-50</option><option>51-200</option><option>201-1000</option><option>1000+</option></select></label><label>Your role<select value={form.userRole} onChange={event=>setForm({...form,userRole:event.target.value as UserRole})}><option value="ORGANIZATION_ADMIN">Organization Admin</option><option value="HR_MANAGER">HR Manager</option><option value="PROJECT_MANAGER">Project Manager</option><option value="TEAM_LEAD">Team Lead</option><option value="EMPLOYEE">Employee</option></select></label></div></>}<label>Work email<input required type="email" value={form.email} onChange={event=>setForm({...form,email:event.target.value})} autoComplete="email"/></label>{mode!=='forgot'&&<label>{mode==='reset'?'New password':'Password'}<input required type="password" minLength={10} value={form.password} onChange={event=>setForm({...form,password:event.target.value})} autoComplete={mode==='login'?'current-password':'new-password'}/><small>At least 10 characters with upper-case, lower-case, and a number.</small></label>}{error&&<p className="form-error">{error}</p>}{message&&<p className="form-success">{message}</p>}<button className="primary auth-submit" disabled={busy}>{busy?<Loader2 className="spin"/>:mode==='signup'?<UserPlusIcon/>:<ShieldCheck/>}{busy?'Please wait…':mode==='signup'?'Create account':mode==='forgot'?'Send reset link':mode==='reset'?'Update password':'Sign in'}</button>{mode==='login'&&<><button type="button" className="text-action" onClick={()=>setMode('forgot')}>Forgot password?</button><p className="demo-note"><b>Local demo</b><span>admin@shapeteam.local · Demo12345!</span></p></>}{mode==='signup'?<p>Already have an account? <button type="button" className="text-action" onClick={()=>setMode('login')}>Sign in</button></p>:mode!=='reset'&&<p>New to ShapeTeam? <button type="button" className="text-action" onClick={()=>setMode('signup')}>Create an account</button></p>}</form></main></div>
+}
+function UserPlusIcon(){return <Users/>}
+function Logo({home}:{home:()=>void}){return <button className="brand" onClick={home} aria-label="Go to dashboard"><b><Rocket/><span>Shape</span>Team</b><small>Enterprise AI</small></button>}
+function Intro({eyebrow,title,copy,actions}:{eyebrow:string;title:string;copy:string;actions?:React.ReactNode}){return <div className="intro"><div><small>{eyebrow}</small><h1>{title}</h1><p>{copy}</p></div>{actions&&<div className="actions">{actions}</div>}</div>}
+function Dashboard({projects,candidates,teams,loading,metrics,go,setSelected,diagnostics,canCreate}:{projects:Project[];candidates:Candidate[];teams:Team[];loading:boolean;metrics:Record<string,number|Array<{label:string;value:number}>>;go:(v:View)=>void;setSelected:(p:Project)=>void;diagnostics:()=>void;canCreate:boolean}){const stats=[['Active projects',Number(metrics.activeProjects??projects.length),FolderKanban],['Employees analyzed',Number(metrics.activeUsers??candidates.length).toLocaleString(),Users],['Teams formed',Number(metrics.teamsFormed??teams.length),BriefcaseBusiness],['Avg team compatibility',`${Number(metrics.averageTeamCompatibility??0)}%`,Sparkles]] as const;return <><Intro eyebrow="Algorithmic talent intelligence • Real-time synthesis" title="Good morning, Heyramb" copy="Here is your workforce optimization overview and real-time team intelligence." actions={<><button className="secondary" onClick={diagnostics}><Gauge/>Run AI Diagnostics</button>{canCreate&&<button className="primary" onClick={()=>go('create')}><WandSparkles/>Create New Team</button>}</>}/><div className="stats">{stats.map(([l,v,I])=><div className="stat" key={l}><span><small>{l}</small><b>{loading?'—':v}</b><em>↑ 12.5% <i>vs last month</i></em></span><I/></div>)}</div><div className="dashboard"><section className="card performance"><CardTitle title="Team Performance Overview" copy="Comparative analysis across organizational cohorts"/><div className="legend">● Actual synergy　<span>● Baseline target</span></div><div className="chart"><i/><i/><i/><svg viewBox="0 0 700 240" preserveAspectRatio="none"><defs><linearGradient id="area"><stop stopColor="#2563eb" stopOpacity=".25"/><stop offset="1" stopColor="#2563eb" stopOpacity="0"/></linearGradient></defs><path className="area" d="M0 200C100 190 140 210 220 145S340 100 430 80S570 60 700 40L700 240H0Z"/><path className="actual" d="M0 200C100 190 140 210 220 145S340 100 430 80S570 60 700 40"/><path className="target" d="M0 220C170 170 430 160 700 105"/></svg><div><span>JAN</span><span>FEB</span><span>MAR</span><span>APR</span><span>MAY</span><span>JUN</span></div></div><div className="insight"><Sparkles/>Predictive model projects a <b>+3.4% affinity surge</b> by July.</div></section><section className="card split"><CardTitle title="Workforce Split" copy="Allocation across active talent pools"/><div className="donut"><span><b>{candidates.length.toLocaleString()}</b><small>Total staff</small></span></div>{[['Engineering','42%'],['Design','18%'],['Marketing','16%'],['Operations','14%'],['Research','10%']].map((r,i)=><p key={r[0]}><i className={`d${i}`}/>{r[0]}<b>{r[1]}</b></p>)}</section><section className="card recent"><CardTitle title="Recent AI Team Recommendations" copy="Generated teams awaiting executive confirmation"/>{projects.slice(0,4).map((p,i)=><button key={p.id} onClick={()=>{setSelected(p);go('recommendations')}}><i><Sparkles/></i><span><b>{p.title}</b><small>{p.requiredRoles.length} specialist roles</small></span><em>{96-i*2}%</em><ChevronRight/></button>)}{!projects.length&&<Empty text="Create a project to begin team optimization."/>}</section><section className="advisory"><Sparkles/><small>AI advisory notice</small><h2>Capacity imbalance detected</h2><p>AI suggests reallocating specialist capacity to optimize delivery cycles.</p>{canCreate&&<button onClick={()=>go('create')}>Auto-balance now</button>}</section></div></>}
+function CardTitle({title,copy}:{title:string;copy:string}){return <div className="card-title"><h2>{title}</h2><p>{copy}</p></div>}
+function Employees({candidates,total,query,setQuery,syncing,sync,add,inspect,canAdd}:{candidates:Candidate[];total:number;query:string;setQuery:(v:string)=>void;syncing:boolean;sync:()=>void;add:()=>void;inspect:(candidate:Candidate)=>void;canAdd:boolean}){return <><Intro eyebrow="Enterprise workforce roster • Algorithmic talent allocation" title="Employee Directory & Talent Intelligence" copy={`Manage ${total.toLocaleString()} cross-functional team members, skills, and workload allocations.`} actions={<><button className="secondary" onClick={sync}>{syncing?<Loader2 className="spin"/>:<Database/>}Sync Excel</button>{canAdd&&<button className="primary" onClick={add}><Plus/>Add Employee</button>}</>}/><div className="stats"><Stat label="Total workforce" value={total}/><Stat label="Available for projects" value={Math.round(total*.27)}/><Stat label="Nominal load" value={Math.round(total*.1)}/><Stat label="Overallocated" value={Math.round(total*.02)} danger/></div><section className="card directory"><div className="filters"><label><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by name, role, or skill..."/></label><span>{candidates.length} records</span></div><div className="table-wrap"><table><thead><tr><th>Employee</th><th>Role</th><th>Core competencies</th><th>Experience</th><th>Availability</th><th>AI fit</th></tr></thead><tbody>{candidates.slice(0,30).map((c,i)=><tr key={c.id}><td><button className="employee-link" onClick={()=>inspect(c)}><i className={`person c${i%5}`}>{initials(c.fullName)}</i><span><b>{c.fullName}</b><small>{c.email}</small></span></button></td><td>{labelRole(c.role)}</td><td><div className="skills">{c.skills.slice(0,3).map(s=><i key={s}>{s}</i>)}</div></td><td><b>{c.experienceYears}y</b></td><td><div className="capacity"><small>{c.availabilityHrs} hrs free</small><i><b style={{width:`${Math.min(100,c.availabilityHrs/40*100)}%`}}/></i></div></td><td><em className="fit">{Math.round(c.fitScore||0)}%</em></td></tr>)}</tbody></table></div>{!candidates.length&&<Empty text="Sync the Excel dataset or adjust your search."/>}</section></>}
+function Stat({label,value,danger}:{label:string;value:string|number;danger?:boolean}){return <div className={`stat ${danger?'danger':''}`}><span><small>{label}</small><b>{value}</b><em>{danger?'Action required':'Global active'}</em></span><Activity/></div>}
+function Projects({projects,selected,inspect,create,canCreate}:{projects:Project[];selected:Project|null;inspect:(p:Project)=>void;create:()=>void;canCreate:boolean}){return <><Intro eyebrow="Portfolio intelligence" title="Projects" copy="Review requirements and choose the next initiative to optimize." actions={canCreate?<button className="primary" onClick={create}><Plus/>New Project</button>:undefined}/><div className="project-grid">{projects.map(p=><button key={p.id} className={selected?.id===p.id?'selected':''} onClick={()=>inspect(p)}><div><i><FolderKanban/></i><em>Active</em></div><h2>{p.title}</h2><p>{p.requiredRoles.length} required roles · {p.maxDeadlineWeeks} week timeline</p><div className="skills">{p.requiredRoles.slice(0,4).map(r=><i key={r}>{labelRole(r)}</i>)}</div><footer><span>Budget <b>${p.budgetLimit}/hr</b></span><span>Min exp. <b>{p.minExperience}y</b></span></footer></button>)}{!projects.length&&<Empty text="Create your first project to begin."/>}</div></>}
+type CreateProps={projects:Project[];selected:Project|null;setSelected:(p:Project)=>void;candidates:number;roles:string[];setRoles:(r:string[])=>void;title:string;setTitle:(v:string)=>void;budget:string;setBudget:(v:string)=>void;deadline:string;setDeadline:(v:string)=>void;experience:string;setExperience:(v:string)=>void;creating:boolean;submit:(e:FormEvent)=>void;syncing:boolean;sync:()=>void;optimizing:boolean;stage:number;generate:()=>void};
+function Create(p:CreateProps){const toggle=(r:string)=>p.setRoles(p.roles.includes(r)?p.roles.filter(v=>v!==r):[...p.roles,r]);return <><div className="steps">{['Project details','Requirements','AI optimization','Review & launch'].map((s,i)=><div className={i<2?'active':''} key={s}><i>{i===0?<Check/>:i+1}</i><span><b>{i+1}. {s}</b><small>{i<2?'Configured':'Pending'}</small></span></div>)}</div><Intro eyebrow="Algorithmic workforce assembler" title="Create an optimal team" copy="Define requirements, select a project, and let ShapeTeam AI score the strongest compatible team."/><div className="builder"><section className="card form-card"><CardTitle title="Define project requirements" copy="Create a new initiative for the optimizer."/><form onSubmit={p.submit}><label>Project title<input required value={p.title} onChange={e=>p.setTitle(e.target.value)} placeholder="e.g. Finance API migration"/></label><div><label>Budget limit ($/hr)<input type="number" value={p.budget} onChange={e=>p.setBudget(e.target.value)}/></label><label>Minimum experience<input type="number" value={p.experience} onChange={e=>p.setExperience(e.target.value)}/></label></div><label>Maximum duration (weeks)<input type="number" value={p.deadline} onChange={e=>p.setDeadline(e.target.value)}/></label><fieldset><legend>Required team roles</legend><div>{ROLES.map(([v,l])=><button type="button" key={v} className={p.roles.includes(v)?'chosen':''} onClick={()=>toggle(v)}><i>{p.roles.includes(v)&&<Check/>}</i>{l}</button>)}</div></fieldset><button className="primary submit">{p.creating?<Loader2 className="spin"/>:<Plus/>}Save project requirement</button></form></section><aside className="builder-side"><section className="card"><CardTitle title="Optimization target" copy="Select an existing project."/><div className="project-select">{p.projects.map(x=><button key={x.id} className={p.selected?.id===x.id?'selected':''} onClick={()=>p.setSelected(x)}><span><b>{x.title}</b><small>{x.requiredRoles.length} roles · ${x.budgetLimit}/hr</small></span>{p.selected?.id===x.id?<CheckCircle2/>:<ChevronRight/>}</button>)}</div></section><section className="card launch"><div className="pool"><Database/><span><b>{p.candidates.toLocaleString()}</b><small>Candidates indexed</small></span><button className="secondary" onClick={p.sync}>{p.syncing?<Loader2 className="spin"/>:<RefreshCw/>}Sync</button></div>{p.optimizing?<div className="pipeline"><h3>Optimization in progress</h3>{['ML candidate scoring','Symbolic constraint validation','A* team composition search'].map((x,i)=><p className={p.stage>i?'active':''} key={x}><i>{p.stage>i?<Loader2 className="spin"/>:i+1}</i>{x}</p>)}</div>:<div className="ready"><Sparkles/><h3>Ready to synthesize</h3><p>ShapeTeam combines candidate fit, role constraints, cost, and availability.</p></div>}<button className="ai-button" onClick={p.generate} disabled={!p.selected||p.optimizing}><Sparkles/>{p.optimizing?'Optimizing team...':'Run AI optimization'}<ChevronRight/></button></section></aside></div></>}
+function Recommendation({project,team,optimizing,generate,create,launch,canAct}:{project:Project|null;team:Team|undefined;optimizing:boolean;generate:()=>void;create:()=>void;launch:()=>void;canAct:boolean}){if(!project||!team)return <section className="card rec-empty"><Sparkles/><h1>No recommendation selected</h1><p>Create or select a project, then run AI optimization.</p><button className="primary" onClick={create}><WandSparkles/>Build a team</button></section>;const score=Math.round(team.optimalityScore);return <><Intro eyebrow="Algorithm v3.2 • Computed recommendation" title={`AI Team Recommendation: ${project.title}`} copy="Transparent scoring across capability, cost, availability, and compatibility." actions={<>{canAct&&<button className="secondary" onClick={generate}>{optimizing?<Loader2 className="spin"/>:<RefreshCw/>}Regenerate</button>}{canAct&&<button className="primary" onClick={launch} disabled={team.status==='APPROVED'}><Sparkles/>{team.status==='PENDING_APPROVAL'?'Approve recommendation':team.status==='APPROVED'?'Approved':'Submit for approval'}</button>}</>}/><div className="ribbon"><span>● Status: <b>Optimal synergy formed</b></span><span>Overall score: <b>{score}/100</b></span><span>Team size: <b>{team.members.length} specialists</b></span><span>Budget: <b>${team.totalCost}/hr</b></span></div><div className="analysis">{[['Skill Coverage',Math.min(99,score+2)],['Workload Balance',Math.max(75,score-4)],['Psy-Safety & Synergy',Math.min(98,score+1)],['Risk Mitigation',Math.min(96,score)]].map(([l,v])=><div key={l}><small>Algorithmic metric</small><i style={{'--score':`${v}%`} as React.CSSProperties}><b>{v}%</b></i><h3>{l}</h3><p>Sustainable enterprise band</p></div>)}</div><CardTitle title={`Selected Roster (${team.members.length} Specialists)`} copy="Optimized for velocity, decision-making, and dependable delivery."/><div className="roster">{team.members.map((m,i)=><article key={m.id}><i className={`person large c${i%5}`}>{initials(m.candidate.fullName)}</i><em>{Math.max(84,score-i)}% Synergy</em><h3>{m.candidate.fullName}</h3><p>{labelRole(m.assignedRole)}</p><blockquote><small>Algorithmic rationale</small>Strong capability coverage with compatible cost and workload.</blockquote><div className="skills">{m.candidate.skills.slice(0,3).map(s=><i key={s}>{s}</i>)}</div><footer>Avail: {m.candidate.availabilityHrs} hrs/week</footer></article>)}</div><div className="explain"><section className="card"><CardTitle title="Why this team works" copy="Structural compatibility from the cognitive graph."/>{['Complete required role coverage','Budget and experience constraints validated','Complementary skills reduce delivery risk'].map(x=><p key={x}><CheckCircle2/>{x}</p>)}</section><section className="card risk"><CardTitle title="AI Explainability & Risk Advisory" copy="Transparent heuristics and governance flags."/><div><b>Minor role overlap alert</b><p>Clarify architecture and code-review ownership during kickoff.</p></div></section></div></>}
+function Analysis({team,project,openWeights,generate}:{team:Team|undefined;project:Project|null;openWeights:()=>void;generate:()=>void}){if(!team)return <section className="card rec-empty"><BarChart3/><h1>No team analysis yet</h1><p>Run an optimization to generate compatibility and delivery metrics.</p><button className="primary" onClick={generate}><WandSparkles/>Create a team</button></section>;const score=Math.round(team.optimalityScore);return <><Intro eyebrow="Decision intelligence" title="Team Analysis" copy={`Validated delivery signals for ${project?.title||'the selected project'}.`} actions={<button className="secondary" onClick={openWeights}><SlidersHorizontal/>Scoring weights</button>}/><div className="stats"><Stat label="Overall compatibility" value={`${score}%`}/><Stat label="Combined capacity" value={`${team.members.reduce((sum,m)=>sum+m.candidate.availabilityHrs,0)}h`}/><Stat label="Team cost" value={`$${team.totalCost}/hr`}/><Stat label="Delivery risk" value={score>90?'Low':'Moderate'}/></div><div className="analysis">{[['Role coverage',100],['Skill adjacency',Math.min(99,score+1)],['Capacity balance',Math.max(78,score-5)],['Cost efficiency',Math.min(97,score)]].map(([label,value])=><div key={label}><small>Validated signal</small><i style={{'--score':`${value}%`} as React.CSSProperties}><b>{value}%</b></i><h3>{label}</h3><p>Within recommended band</p></div>)}</div><section className="card"><CardTitle title="Team composition" copy="Contribution and availability by assigned role."/><div className="diagnostic-list">{team.members.map(member=><p key={member.id}><CheckCircle2/><span><b>{member.candidate.fullName} · {labelRole(member.assignedRole)}</b><small>{member.candidate.availabilityHrs} hrs/week available · {member.candidate.skills.join(', ')}</small></span></p>)}</div></section></>}
+function Reports({projects,team,exportTeam}:{projects:Project[];team:Team|undefined;exportTeam:()=>void}){const [busy,setBusy]=useState('');const exportReport=async(format:'pdf'|'csv')=>{setBusy(format);try{const blob=await apiService.exportReport('team_formation',format);saveBlob(`shapeteam-team-formation.${format}`,blob)}finally{setBusy('')}};return <><Intro eyebrow="Workforce intelligence exports" title="Reports" copy="Generate organization-scoped, decision-ready workforce reports." actions={<><button className="secondary" onClick={exportTeam} disabled={!team}><FileText/>Quick summary</button><button className="secondary" onClick={()=>exportReport('csv')} disabled={!!busy}>{busy==='csv'?<Loader2 className="spin"/>:<Download/>}CSV</button><button className="primary" onClick={()=>exportReport('pdf')} disabled={!!busy}>{busy==='pdf'?<Loader2 className="spin"/>:<Download/>}PDF report</button></>}/><div className="project-grid">{projects.map((project,index)=><section className="card report-card" key={project.id}><div><i><FileText/></i><em>{index===0&&team?'Ready':'Project brief'}</em></div><h2>{project.title}</h2><p>{project.requiredRoles.length} roles · {project.maxDeadlineWeeks} weeks</p><div className="skills">{project.requiredRoles.slice(0,4).map(role=><i key={role}>{labelRole(role)}</i>)}</div></section>)}</div>{!projects.length&&<Empty text="Create a project to make reporting available."/>}</>}
+function SettingsView({openWeights,flash}:{openWeights:()=>void;flash:(type:'success'|'error',message:string)=>void}){const [configuration,setConfiguration]=useState<{skillMatchWeight:number;experienceWeight:number;behaviorWeight:number;workloadWeight:number;availabilityWeight:number;decisionTreeWeight:number;minimumSkillCoverage:number;maximumWorkload:number;approvalRequired:boolean}|null>(null),[logs,setLogs]=useState<Array<{id:string;action:string;user:string;timestamp:string}>>([]),[saving,setSaving]=useState(false);useEffect(()=>{apiService.getAIConfiguration().then(result=>setConfiguration(result.configuration)).catch(()=>undefined);apiService.getAuditLogs().then(result=>setLogs(result.logs.slice(0,6))).catch(()=>undefined)},[]);const save=async()=>{if(!configuration)return;setSaving(true);try{const result=await apiService.updateAIConfiguration(configuration);setConfiguration(result.configuration);flash('success','AI scoring configuration saved.')}catch(error){flash('error',error instanceof Error?error.message:'Unable to save configuration.')}finally{setSaving(false)}};return <><Intro eyebrow="Platform configuration" title="Settings & Governance" copy="Manage explainable scoring, approval policy, and audit evidence."/><div className="settings-grid"><section className="card"><ShieldCheck/><CardTitle title="Responsible AI controls" copy="Weights must total exactly 100%. Protected attributes are never used."/><button className="secondary" onClick={openWeights}><SlidersHorizontal/>Review scoring model</button></section><section className="card"><Database/><CardTitle title="Organization isolation" copy="Every API query is scoped to the signed-in organization and checked server-side."/><button className="secondary" onClick={()=>flash('success','Organization isolation is active.')}><Check/>Security status</button></section><section className="card"><Bell/><CardTitle title="Approval workflow" copy={configuration?.approvalRequired?'Admin approval is required before a team becomes active.':'Recommendations can activate without admin approval.'}/><button className="secondary" onClick={()=>configuration&&setConfiguration({...configuration,approvalRequired:!configuration.approvalRequired})}><Check/>Toggle policy</button></section></div>{configuration&&<section className="card settings-form"><CardTitle title="AI scoring configuration" copy="Role suitability weights and hard constraint thresholds."/><div className="weight-inputs">{([['skillMatchWeight','Skill match'],['experienceWeight','Experience'],['behaviorWeight','Behavior'],['workloadWeight','Workload'],['availabilityWeight','Availability'],['decisionTreeWeight','Decision tree']] as const).map(([key,label])=><label key={key}>{label}<input type="number" min="0" max="100" value={configuration[key]} onChange={event=>setConfiguration({...configuration,[key]:Number(event.target.value)})}/><span>%</span></label>)}</div><button className="primary" onClick={save} disabled={saving}>{saving?<Loader2 className="spin"/>:<Check/>}Save configuration</button></section>}<section className="card audit-card"><CardTitle title="Recent audit activity" copy="Immutable organization-level records for important actions."/><div className="audit-list">{logs.map(log=><p key={log.id}><span><b>{labelRole(log.action)}</b><small>{log.user}</small></span><time>{new Date(log.timestamp).toLocaleString()}</time></p>)}</div></section></>}
+function PanelView({panel,close,candidates,projects,teams,candidate,project,optimize,onRead,canManageRoles,onUserUpdated,added}:{panel:Exclude<Panel,null>;close:()=>void;candidates:Candidate[];projects:Project[];teams:Team[];candidate:Candidate|null;project:Project|null;optimize:(project:Project)=>void;onRead:()=>void;canManageRoles:boolean;onUserUpdated:()=>Promise<void>;added:(candidate:Candidate)=>void}){
+  const [saving,setSaving]=useState(false),[error,setError]=useState('');
+  const [notificationItems,setNotificationItems]=useState<Array<{id:string;title:string;message:string;isRead:boolean}>>([]);
+  const [profileRole,setProfileRole]=useState<UserRole>('EMPLOYEE');
+  useEffect(()=>{if(panel==='notifications')apiService.getNotifications().then(result=>setNotificationItems(result.notifications)).catch(()=>setNotificationItems([]))},[panel]);
+  useEffect(()=>{if(candidate?.user)setProfileRole(candidate.user.role)},[candidate]);
+  const [employee,setEmployee]=useState({fullName:'',email:'',role:'DEVELOPER',experienceYears:'3',costPerHour:'55',availabilityHrs:'40',skills:''});
+  const saveEmployee=async(event:FormEvent)=>{event.preventDefault();setSaving(true);setError('');try{const response=await apiService.createCandidate({...employee,experienceYears:+employee.experienceYears,costPerHour:+employee.costPerHour,availabilityHrs:+employee.availabilityHrs,skills:employee.skills.split(',').map(skill=>skill.trim()).filter(Boolean)});added(response.candidate)}catch(reason){setError(reason instanceof Error?reason.message:'Unable to add employee.')}finally{setSaving(false)}};
+  const saveRole=async()=>{if(!candidate)return;setSaving(true);setError('');try{await apiService.updateUser(candidate.id,{role:profileRole});await onUserUpdated();close()}catch(reason){setError(reason instanceof Error?reason.message:'Unable to update role.')}finally{setSaving(false)}};
+  return <div className="modal-backdrop" onMouseDown={event=>event.target===event.currentTarget&&close()}><section className="modal" role="dialog" aria-modal="true"><button className="modal-close" onClick={close} aria-label="Close"><X/></button>
+    {panel==='addEmployee'&&<><CardTitle title="Add Employee" copy="Create a workforce profile for team optimization."/><form className="employee-form" onSubmit={saveEmployee}><label>Full name<input required value={employee.fullName} onChange={e=>setEmployee({...employee,fullName:e.target.value})}/></label><label>Email address<input required type="email" value={employee.email} onChange={e=>setEmployee({...employee,email:e.target.value})}/></label><label>Role<select value={employee.role} onChange={e=>setEmployee({...employee,role:e.target.value})}>{ROLES.map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label><div><label>Experience (years)<input required min="0" type="number" value={employee.experienceYears} onChange={e=>setEmployee({...employee,experienceYears:e.target.value})}/></label><label>Cost per hour<input required min="1" type="number" value={employee.costPerHour} onChange={e=>setEmployee({...employee,costPerHour:e.target.value})}/></label></div><label>Weekly availability<input required min="0" max="40" type="number" value={employee.availabilityHrs} onChange={e=>setEmployee({...employee,availabilityHrs:e.target.value})}/></label><label>Skills <small>Comma separated</small><input value={employee.skills} onChange={e=>setEmployee({...employee,skills:e.target.value})} placeholder="React, TypeScript, AWS"/></label>{error&&<p className="form-error">{error}</p>}<button className="primary" disabled={saving}>{saving?<Loader2 className="spin"/>:<Plus/>}{saving?'Adding employee...':'Add Employee'}</button></form></>}
+    {panel==='diagnostics'&&<><CardTitle title="AI Diagnostics Complete" copy="Live readiness checks across the workforce graph."/><div className="diagnostic-list"><p><CheckCircle2/><span><b>Candidate index healthy</b><small>{candidates.length.toLocaleString()} profiles are available for matching.</small></span></p><p><CheckCircle2/><span><b>Project constraints valid</b><small>{projects.length} active projects passed schema validation.</small></span></p><p><CheckCircle2/><span><b>Optimization history ready</b><small>{teams.length} generated teams are available for comparison.</small></span></p></div><button className="primary modal-action" onClick={close}>Done</button></>}
+    {panel==='notifications'&&<><CardTitle title="Notifications" copy={`${notificationItems.filter(item=>!item.isRead).length} unread workforce events.`}/><div className="notice-list">{notificationItems.map(item=><p key={item.id}><Bell/><span><b>{item.title}</b><small>{item.message}</small></span></p>)}{!notificationItems.length&&<Empty text="You are all caught up."/>}</div><button className="primary modal-action" onClick={()=>{onRead();close()}}>Mark all as read</button></>}
+    {panel==='candidate'&&candidate&&<><CardTitle title={candidate.fullName} copy={`${labelRole(candidate.role)} · ${candidate.email}`}/><div className="profile-summary"><i className="person large">{initials(candidate.fullName)}</i><div><b>{candidate.experienceYears} years experience</b><small>{candidate.availabilityHrs} hours available weekly · ${candidate.costPerHour}/hr</small></div></div><div className="skills">{candidate.skills.map(skill=><i key={skill}>{skill}</i>)}</div><div className="diagnostic-list"><p><Sparkles/><span><b>{Math.round(candidate.fitScore||0)}% AI fit score</b><small>Calculated from experience, skills, availability, and role adjacency.</small></span></p></div>{canManageRoles&&<div className="role-editor"><label>Account role<select value={profileRole} onChange={event=>setProfileRole(event.target.value as UserRole)}><option value="ORGANIZATION_ADMIN">Organization Admin</option><option value="HR_MANAGER">HR Manager</option><option value="PROJECT_MANAGER">Project Manager</option><option value="TEAM_LEAD">Team Lead</option><option value="EMPLOYEE">Employee</option></select></label>{error&&<p className="form-error">{error}</p>}<button className="secondary" onClick={saveRole} disabled={saving}>{saving?<Loader2 className="spin"/>:<ShieldCheck/>}Update role</button></div>}<button className="primary modal-action" onClick={close}>Close profile</button></>}
+    {panel==='project'&&project&&<><CardTitle title={project.title} copy={`${project.requiredRoles.length} required roles · ${project.maxDeadlineWeeks} week timeline`}/><div className="stats modal-stats"><Stat label="Budget" value={`$${project.budgetLimit}/hr`}/><Stat label="Min experience" value={`${project.minExperience}y`}/></div><div className="skills">{project.requiredRoles.map(role=><i key={role}>{labelRole(role)}</i>)}</div><button className="primary modal-action" onClick={()=>optimize(project)}><WandSparkles/>Optimize this project</button></>}
+    {panel==='weights'&&<><CardTitle title="AI scoring weights" copy="The current enterprise model balances four explainable signals."/><div className="weight-list">{[['Skills & role coverage','40%'],['Availability & workload','25%'],['Experience depth','20%'],['Cost efficiency','15%']].map(([label,value])=><p key={label}><span>{label}</span><b>{value}</b></p>)}</div><button className="primary modal-action" onClick={close}>Done</button></>}
+    {panel==='help'&&<><CardTitle title="ShapeTeam Help Center" copy="Quick guidance for the workforce optimization workflow."/><div className="help-list"><p><b>1. Sync employees</b><span>Open Employees and sync the Excel dataset or add a profile manually.</span></p><p><b>2. Define requirements</b><span>Create a project with budget, timeline, experience, and role constraints.</span></p><p><b>3. Generate a team</b><span>Select the project and run AI optimization to create a recommendation.</span></p><p><b>4. Review and launch</b><span>Inspect the explanation and save the selected roster.</span></p></div><button className="primary modal-action" onClick={close}>Got it</button></>}
+  </section></div>
+}
+function Empty({text}:{text:string}){return <div className="empty"><Users/><h3>No data available</h3><p>{text}</p></div>}

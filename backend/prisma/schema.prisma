@@ -1,72 +1,276 @@
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  extensions = [pgvector(map: "vector")]
+  provider = "postgresql"
+  url = env("DATABASE_URL")
 }
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
+  provider = "prisma-client-js"
 }
 
-enum Role {
-  DEVELOPER
-  DESIGNER
+enum UserRole {
+  ORGANIZATION_ADMIN
+  HR_MANAGER
   PROJECT_MANAGER
-  DATA_SCIENTIST
-  DEVOPS
-  DATA_ANALYST
   TEAM_LEAD
-  PRODUCT_ANALYST
-  ML_ENGINEER
-  CLOUD_ENGINEER
-  QA_ENGINEER
-  TESTER
+  EMPLOYEE
 }
 
-model Candidate {
-  id               String            @id @default(uuid())
-  fullName         String
-  email            String            @unique
-  role             Role
-  experienceYears  Float
-  costPerHour      Float
-  availabilityHrs  Float
-  skills           String[]          // List of key skills
-  clusterId        Int?              // Assigned by K-Means
-  fitScore         Float?            // Predicted by Decision Tree
-  embedding        Unsupported("vector(384)")? // PgVector for semantic skill search
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  TeamMember       TeamMember[]
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
 }
 
+enum ProjectPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum WorkflowStatus {
+  DRAFT
+  PROCESSING
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+  ARCHIVED
+}
+
+model Organization {
+  id String @id @default(uuid())
+  name String
+  industry String
+  size String
+  logo String?
+  settings Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  users User[]
+  departments Department[]
+  projects Project[]
+  teams Team[]
+  aiConfigurations AIConfiguration[]
+  notifications Notification[]
+  auditLogs AuditLog[]
+  skills Skill[]
+  @@map("organizations")
+}
+model Department {
+  id String @id @default(uuid())
+  organizationId String @map("organization_id")
+  name String
+  description String
+  organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  users User[]
+  projects Project[]
+  @@unique([organizationId,name])
+  @@map("departments")
+}
+model User {
+  id String @id @default(uuid())
+  organizationId String @map("organization_id")
+  name String
+  email String @unique
+  passwordHash String @map("password_hash")
+  role UserRole
+  departmentId String? @map("department_id")
+  jobTitle String @map("job_title")
+  experienceYears Float @map("experience_years")
+  availabilityPercentage Float @map("availability_percentage")
+  currentWorkloadPercentage Float @map("current_workload_percentage")
+  behaviorScore Float @map("behavior_score")
+  status UserStatus
+  profileImage String? @map("profile_image")
+  emailVerified Boolean @default(false) @map("email_verified")
+  externalId String? @map("external_id")
+  dataSource String? @map("data_source")
+  metadata Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  department Department? @relation(fields:[departmentId],references:[id],onDelete:SetNull)
+  skills UserSkill[]
+  managedProjects Project[] @relation("ProjectManager")
+  memberships TeamMember[]
+  createdTeams Team[] @relation("TeamCreator")
+  approvedTeams Team[] @relation("TeamApprover")
+  notifications Notification[]
+  auditLogs AuditLog[]
+  @@index([organizationId,role])
+  @@map("users")
+}
+model Skill {
+  id String @id @default(uuid())
+  organizationId String? @map("organization_id")
+  name String
+  category String
+  description String
+  organization Organization? @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  users UserSkill[]
+  @@unique([organizationId,name])
+  @@map("skills")
+}
+model UserSkill {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  skillId String @map("skill_id")
+  proficiencyLevel Int @map("proficiency_level")
+  yearsOfExperience Float @map("years_of_experience")
+  verified Boolean @default(false)
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  skill Skill @relation(fields:[skillId],references:[id],onDelete:Cascade)
+  @@unique([userId,skillId])
+  @@map("user_skills")
+}
+model Project {
+  id String @id @default(uuid())
+  organizationId String @map("organization_id")
+  name String
+  description String
+  departmentId String? @map("department_id")
+  managerId String @map("manager_id")
+  startDate DateTime @map("start_date")
+  endDate DateTime @map("end_date")
+  priority ProjectPriority
+  requiredTeamSize Int @map("required_team_size")
+  status ProjectStatus
+  completionPercentage Float @map("completion_percentage")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  department Department? @relation(fields:[departmentId],references:[id],onDelete:SetNull)
+  manager User @relation("ProjectManager",fields:[managerId],references:[id])
+  requirements ProjectRequirement[]
+  teams Team[]
+  recommendations Recommendation[]
+  @@unique([organizationId,name,status])
+  @@map("projects")
+}
 model ProjectRequirement {
-  id               String            @id @default(uuid())
-  title            String
-  budgetLimit      Float
-  requiredRoles    String[]          // e.g. ["DEVELOPER", "DESIGNER"]
-  maxDeadlineWeeks Int
-  minExperience    Float
-  teams            Team[]
-  createdAt        DateTime          @default(now())
+  id String @id @default(uuid())
+  projectId String @map("project_id")
+  roleName String @map("role_name")
+  requiredSkills Json @map("required_skills")
+  requiredSoftSkills String[] @map("required_soft_skills")
+  minimumExperience Float @map("minimum_experience")
+  availabilityRequirement Float @map("availability_requirement")
+  workloadLimit Float @map("workload_limit")
+  diversityPreferences Json @map("diversity_preferences")
+  collaborationStyle String @map("collaboration_style")
+  project Project @relation(fields:[projectId],references:[id],onDelete:Cascade)
+  @@map("project_requirements")
 }
-
 model Team {
-  id               String             @id @default(uuid())
-  projectId        String
-  project          ProjectRequirement @relation(fields: [projectId], references: [id])
-  totalCost        Float
-  optimalityScore  Float              // Derived from A* search cost function
-  members          TeamMember[]
-  createdAt        DateTime           @default(now())
+  id String @id @default(uuid())
+  organizationId String @map("organization_id")
+  projectId String @map("project_id")
+  name String
+  status WorkflowStatus
+  compatibilityScore Float @map("compatibility_score")
+  skillCoverageScore Float @map("skill_coverage_score")
+  workloadBalanceScore Float @map("workload_balance_score")
+  availabilityScore Float @map("availability_score")
+  diversityScore Float @map("diversity_score")
+  confidenceScore Float @map("confidence_score")
+  createdBy String @map("created_by")
+  approvedBy String? @map("approved_by")
+  approvedAt DateTime? @map("approved_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  project Project @relation(fields:[projectId],references:[id],onDelete:Cascade)
+  creator User @relation("TeamCreator",fields:[createdBy],references:[id])
+  approver User? @relation("TeamApprover",fields:[approvedBy],references:[id])
+  members TeamMember[]
+  recommendations Recommendation[]
+  @@map("teams")
 }
-
 model TeamMember {
-  id           String    @id @default(uuid())
-  teamId       String
-  candidateId  String
-  assignedRole String
-  team         Team      @relation(fields: [teamId], references: [id])
-  candidate    Candidate @relation(fields: [candidateId], references: [id])
+  id String @id @default(uuid())
+  teamId String @map("team_id")
+  userId String @map("user_id")
+  assignedRole String @map("assigned_role")
+  roleSuitabilityScore Float @map("role_suitability_score")
+  assignmentReason String @map("assignment_reason")
+  workloadAtAssignment Float @map("workload_at_assignment")
+  scoreBreakdown Json @map("score_breakdown")
+  team Team @relation(fields:[teamId],references:[id],onDelete:Cascade)
+  user User @relation(fields:[userId],references:[id])
+  @@unique([teamId,userId])
+  @@map("team_members")
+}
+model Recommendation {
+  id String @id @default(uuid())
+  organizationId String @map("organization_id")
+  projectId String @map("project_id")
+  teamId String @map("team_id")
+  recommendationScore Float @map("recommendation_score")
+  confidenceScore Float @map("confidence_score")
+  strengths String[]
+  risks String[]
+  missingSkills String[] @map("missing_skills")
+  explanation String
+  suggestedAction String @map("suggested_action")
+  status WorkflowStatus
+  generatedAt DateTime @default(now()) @map("generated_at")
+  reviewedAt DateTime? @map("reviewed_at")
+  reviewNote String? @map("review_note")
+  project Project @relation(fields:[projectId],references:[id],onDelete:Cascade)
+  team Team @relation(fields:[teamId],references:[id],onDelete:Cascade)
+  @@index([organizationId,status])
+  @@map("recommendations")
+}
+model AIConfiguration {
+  id String @id @default(uuid())
+  organizationId String @map("organization_id")
+  skillMatchWeight Float @map("skill_match_weight")
+  experienceWeight Float @map("experience_weight")
+  behaviorWeight Float @map("behavior_weight")
+  workloadWeight Float @map("workload_weight")
+  availabilityWeight Float @map("availability_weight")
+  decisionTreeWeight Float @map("decision_tree_weight")
+  minimumSkillCoverage Float @map("minimum_skill_coverage")
+  maximumWorkload Float @map("maximum_workload")
+  diversityConstraints Json @map("diversity_constraints")
+  approvalRequired Boolean @map("approval_required")
+  organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  @@unique([organizationId])
+  @@map("ai_configurations")
+}
+model Notification {
+  id String @id @default(uuid())
+  organizationId String @map("organization_id")
+  userId String @map("user_id")
+  type String
+  title String
+  message String
+  isRead Boolean @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+  organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@index([userId,isRead])
+  @@map("notifications")
+}
+model AuditLog {
+  id String @id @default(uuid())
+  organizationId String @map("organization_id")
+  userId String? @map("user_id")
+  action String
+  module String
+  entityType String @map("entity_type")
+  entityId String? @map("entity_id")
+  metadata Json
+  timestamp DateTime @default(now())
+  organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  user User? @relation(fields:[userId],references:[id],onDelete:SetNull)
+  @@index([organizationId,timestamp])
+  @@map("audit_logs")
 }

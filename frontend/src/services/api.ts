@@ -1,107 +1,52 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const API_BASE_URL=process.env.NEXT_PUBLIC_API_URL||'http://localhost:5000/api';
+export type UserRole='ORGANIZATION_ADMIN'|'HR_MANAGER'|'PROJECT_MANAGER'|'TEAM_LEAD'|'EMPLOYEE';
+export interface SessionUser{id:string;organizationId:string;name:string;email:string;role:UserRole;departmentId:string|null;jobTitle:string;experienceYears:number;availabilityPercentage:number;currentWorkloadPercentage:number;behaviorScore:number;status:string;emailVerified:boolean;permissions:string[]}
+export interface Organization{id:string;name:string;industry:string;size:string;settings:Record<string,unknown>}
+export interface Candidate{id:string;fullName:string;email:string;role:string;experienceYears:number;costPerHour:number;availabilityHrs:number;skills:string[];clusterId:number|null;fitScore:number|null;user?:SessionUser}
+export interface Project{id:string;title:string;budgetLimit:number;requiredRoles:string[];maxDeadlineWeeks:number;minExperience:number;createdAt:string;raw?:any}
+export interface TeamMember{id:string;teamId:string;candidateId:string;assignedRole:string;candidate:Candidate;roleSuitabilityScore?:number;assignmentReason?:string;scoreBreakdown?:Record<string,number|boolean>}
+export interface Team{id:string;projectId:string;totalCost:number;optimalityScore:number;createdAt:string;members:TeamMember[];status?:string;skillCoverageScore?:number;workloadBalanceScore?:number;availabilityScore?:number;confidenceScore?:number;recommendation?:Recommendation}
+export interface Recommendation{id:string;projectId:string;teamId:string;recommendationScore:number;confidenceScore:number;strengths:string[];risks:string[];missingSkills:string[];explanation:string;suggestedAction:string;status:string;generatedAt:string;team:any}
+export interface DatasetStatus{success:boolean;required:boolean;importedAt:string|null;sourceFile:string|null;employeeCount:number}
 
-export interface Candidate {
-  id: string;
-  fullName: string;
-  email: string;
-  role: string;
-  experienceYears: number;
-  costPerHour: number;
-  availabilityHrs: number;
-  skills: string[];
-  clusterId: number | null;
-  fitScore: number | null;
+class ApiService{
+  private token:string|null=null;
+  constructor(){if(typeof window!=='undefined')this.token=window.localStorage.getItem('shapeteam:session')}
+  setToken(token:string|null){this.token=token;if(typeof window!=='undefined'){if(token)window.localStorage.setItem('shapeteam:session',token);else window.localStorage.removeItem('shapeteam:session')}}
+  getToken(){return this.token}
+  private async request<T>(endpoint:string,options:RequestInit={}):Promise<T>{const controller=new AbortController();const timeout=window.setTimeout(()=>controller.abort(),15000);try{const response=await fetch(`${API_BASE_URL}${endpoint}`,{...options,signal:controller.signal,headers:{'Content-Type':'application/json',...(this.token?{Authorization:`Bearer ${this.token}`}:{...options.headers})}});const contentType=response.headers.get('content-type')||'';const data=contentType.includes('application/json')?await response.json():await response.blob();if(response.status===401){this.setToken(null);if(typeof window!=='undefined')window.dispatchEvent(new Event('shapeteam:session-expired'))}if(!response.ok)throw new Error(data?.message||'The request could not be completed.');return data as T}catch(error){if(error instanceof DOMException&&error.name==='AbortError')throw new Error('The server took too long to respond. Please try again.');throw error}finally{window.clearTimeout(timeout)}}
+  async login(email:string,password:string){const result=await this.request<any>('/auth/login',{method:'POST',body:JSON.stringify({email,password})});this.setToken(result.token);return result as {success:boolean;token:string;user:SessionUser;organization:Organization}}
+  async signup(input:{fullName:string;email:string;password:string;organizationName:string;organizationSize:string;userRole:UserRole}){const result=await this.request<any>('/auth/signup',{method:'POST',body:JSON.stringify(input)});this.setToken(result.token);return result as {success:boolean;token:string;user:SessionUser;organization:Organization;verificationToken?:string}}
+  async getMe(){return this.request<{success:boolean;user:SessionUser;organization:Organization}>('/auth/me')}
+  async logout(){try{await this.request('/auth/logout',{method:'POST'})}finally{this.setToken(null)}}
+  async forgotPassword(email:string){return this.request<{success:boolean;message:string;resetToken?:string}>('/auth/forgot-password',{method:'POST',body:JSON.stringify({email})})}
+  async resetPassword(token:string,password:string){return this.request<{success:boolean;message:string}>('/auth/reset-password',{method:'POST',body:JSON.stringify({token,password})})}
+  async verifyEmail(token:string){return this.request<{success:boolean;message:string}>('/auth/verify-email',{method:'POST',body:JSON.stringify({token})})}
+  async dashboard(){return this.request<{success:boolean;metrics:any}>('/dashboard')}
+  async getDatasetStatus(){return this.request<DatasetStatus>('/dataset/status')}
+  async importEmployeeDataset(file:File){const base64=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('Unable to read the selected file.'));reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');reader.readAsDataURL(file)});const controller=new AbortController();const timeout=window.setTimeout(()=>controller.abort(),120000);try{const response=await fetch(`${API_BASE_URL}/dataset/import`,{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json',Authorization:`Bearer ${this.token}`},body:JSON.stringify({fileName:file.name,base64})});const data=await response.json();if(response.status===401){this.setToken(null);window.dispatchEvent(new Event('shapeteam:session-expired'))}if(!response.ok)throw new Error(data.message||'Dataset import failed.');return data as {success:boolean;message:string;result:{imported:number;replaced:number;departments:number;skills:number;warnings:string[]};status:DatasetStatus}}catch(error){if(error instanceof DOMException&&error.name==='AbortError')throw new Error('Dataset processing timed out. Try a smaller file.');throw error}finally{window.clearTimeout(timeout)}}
+  private toCandidate(user:any):Candidate{return{id:user.id,fullName:user.name,email:user.email,role:(user.jobTitle||user.role).toUpperCase().replace(/\s+/g,'_'),experienceYears:user.experienceYears,costPerHour:Math.max(35,Math.round(35+user.experienceYears*5)),availabilityHrs:Math.round(user.availabilityPercentage*.4),skills:user.skills?.map((entry:any)=>entry.skill?.name||entry.name).filter(Boolean)||[],clusterId:null,fitScore:Math.round(user.behaviorScore||80),user}}
+  async getCandidates(search=''){const result=await this.request<any>(`/users?limit=500${search?`&search=${encodeURIComponent(search)}`:''}`);const candidates=result.users.map((user:any)=>this.toCandidate(user));return{success:true,count:result.total??candidates.length,loaded:candidates.length,candidates}}
+  async createCandidate(input:{fullName:string;email:string;role:string;experienceYears:number;costPerHour:number;availabilityHrs:number;skills:string[]}){const result=await this.request<any>('/users',{method:'POST',body:JSON.stringify({name:input.fullName,email:input.email,role:'EMPLOYEE',jobTitle:input.role.replaceAll('_',' '),experienceYears:input.experienceYears,availabilityPercentage:Math.min(100,input.availabilityHrs*2.5),behaviorScore:85,skills:input.skills})});const candidate=this.toCandidate(result.user);return{success:true,message:'Employee added successfully.',candidate}}
+  async updateUser(id:string,input:Record<string,unknown>){return this.request<any>(`/users/${id}`,{method:'PATCH',body:JSON.stringify(input)})}
+  async syncCandidates(){const result=await this.getCandidates();return{success:true,message:`${result.count} workforce profiles are connected to the organization.`,count:result.count}}
+  private toProject(project:any):Project{const requirements=project.requirements||[];const start=new Date(project.startDate),end=new Date(project.endDate);return{id:project.id,title:project.name,budgetLimit:project.budgetLimit||500,requiredRoles:requirements.map((item:any)=>String(item.roleName).toUpperCase().replace(/\s+/g,'_')),maxDeadlineWeeks:Math.max(1,Math.round((end.getTime()-start.getTime())/604800000)),minExperience:requirements.length?Math.min(...requirements.map((item:any)=>item.minimumExperience)):0,createdAt:project.createdAt,raw:project}}
+  async getProjects(){const result=await this.request<any>('/projects');const projects=result.projects.map((item:any)=>this.toProject(item));return{success:true,count:projects.length,projects}}
+  async createProject(input:{title:string;budgetLimit:number;requiredRoles:string[];maxDeadlineWeeks:number;minExperience:number}){const result=await this.request<any>('/projects',{method:'POST',body:JSON.stringify({name:input.title,description:'Created in ShapeTeam workforce planner.',requiredTeamSize:input.requiredRoles.length,maxDeadlineWeeks:input.maxDeadlineWeeks,priority:'MEDIUM',requiredRoles:input.requiredRoles,minExperience:input.minExperience})});return{success:true,message:'Project requirement created successfully.',project:this.toProject(result.project)}}
+  private toTeam(raw:any,recommendation?:Recommendation):Team{const members=(raw.members||[]).map((member:any)=>({id:member.id,teamId:raw.id,candidateId:member.userId,assignedRole:member.assignedRole,candidate:this.toCandidate(member.user),roleSuitabilityScore:member.roleSuitabilityScore,assignmentReason:member.assignmentReason,scoreBreakdown:member.scoreBreakdown}));return{id:raw.id,projectId:raw.projectId,totalCost:members.reduce((sum:number,item:TeamMember)=>sum+item.candidate.costPerHour,0),optimalityScore:raw.compatibilityScore,createdAt:raw.createdAt,members,status:raw.status,skillCoverageScore:raw.skillCoverageScore,workloadBalanceScore:raw.workloadBalanceScore,availabilityScore:raw.availabilityScore,confidenceScore:raw.confidenceScore,recommendation}}
+  async getProjectById(id:string){const result=await this.request<any>(`/projects/${id}`);return{success:true,project:this.toProject(result.project),teams:(result.teams||[]).map((team:any)=>this.toTeam(team,(result.recommendations||[]).find((recommendation:any)=>recommendation.teamId===team.id)))}}
+  async generateTeam(projectId:string){const result=await this.request<any>(`/projects/${projectId}/recommendations`,{method:'POST',body:JSON.stringify({limit:3})});const recommendation=result.recommendations[0] as Recommendation;return{success:true,fromCache:false,team:this.toTeam(recommendation.team,recommendation),alternatives:result.recommendations.slice(1)}}
+  async getTeamsByProject(projectId:string){const result=await this.request<any>('/teams');const teams=result.teams.filter((team:any)=>team.projectId===projectId).map((team:any)=>this.toTeam(team));return{success:true,count:teams.length,teams}}
+  async getRecommendations(){return this.request<{success:boolean;count:number;recommendations:Recommendation[]}>('/recommendations')}
+  async submitRecommendation(id:string){return this.request<any>(`/recommendations/${id}/submit`,{method:'POST',body:'{}'})}
+  async reviewRecommendation(id:string,action:'approve'|'reject'|'request-changes',note=''){return this.request<any>(`/recommendations/${id}/${action}`,{method:'POST',body:JSON.stringify({note})})}
+  async getNotifications(){return this.request<any>('/notifications')}
+  async markNotificationsRead(){return this.request('/notifications/all/read',{method:'POST',body:'{}'})}
+  async getAIConfiguration(){return this.request<any>('/ai-configuration')}
+  async updateAIConfiguration(configuration:any){return this.request<any>('/ai-configuration',{method:'PUT',body:JSON.stringify(configuration)})}
+  async getAuditLogs(){return this.request<any>('/audit-logs')}
+  async exportReport(type:string,format:'pdf'|'csv'){const response=await fetch(`${API_BASE_URL}/reports/${type}/export?format=${format}`,{headers:{Authorization:`Bearer ${this.token}`}});if(!response.ok){const data=await response.json();throw new Error(data.message||'Report generation failed.')}return response.blob()}
 }
-
-export interface Project {
-  id: string;
-  title: string;
-  budgetLimit: number;
-  requiredRoles: string[];
-  maxDeadlineWeeks: number;
-  minExperience: number;
-  createdAt: string;
-}
-
-export interface TeamMember {
-  id: string;
-  teamId: string;
-  candidateId: string;
-  assignedRole: string;
-  candidate: Candidate;
-}
-
-export interface Team {
-  id: string;
-  projectId: string;
-  totalCost: number;
-  optimalityScore: number;
-  createdAt: string;
-  members: TeamMember[];
-}
-
-class ApiService {
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.message || 'Something went wrong');
-    }
-    return data;
-  }
-
-  // Candidates
-  async syncCandidates(): Promise<{ success: boolean; message: string; count: number }> {
-    return this.request<{ success: boolean; message: string; count: number }>('/candidates/sync', {
-      method: 'POST',
-    });
-  }
-
-  async getCandidates(): Promise<{ success: boolean; count: number; candidates: Candidate[] }> {
-    return this.request<{ success: boolean; count: number; candidates: Candidate[] }>('/candidates');
-  }
-
-  // Projects
-  async createProject(project: {
-    title: string;
-    budgetLimit: number;
-    requiredRoles: string[];
-    maxDeadlineWeeks: number;
-    minExperience: number;
-  }): Promise<{ success: boolean; message: string; project: Project }> {
-    return this.request<{ success: boolean; message: string; project: Project }>('/projects', {
-      method: 'POST',
-      body: JSON.stringify(project),
-    });
-  }
-
-  async getProjects(): Promise<{ success: boolean; count: number; projects: Project[] }> {
-    return this.request<{ success: boolean; count: number; projects: Project[] }>('/projects');
-  }
-
-  async getProjectById(id: string): Promise<{ success: boolean; project: Project; teams: Team[] }> {
-    return this.request<{ success: boolean; project: Project; teams: Team[] }>(`/projects/${id}`);
-  }
-
-  // Teams
-  async generateTeam(projectId: string): Promise<{ success: boolean; fromCache: boolean; team: Team }> {
-    return this.request<{ success: boolean; fromCache: boolean; team: Team }>('/teams/generate', {
-      method: 'POST',
-      body: JSON.stringify({ projectId }),
-    });
-  }
-
-  async getTeamsByProject(projectId: string): Promise<{ success: boolean; count: number; teams: Team[] }> {
-    return this.request<{ success: boolean; count: number; teams: Team[] }>(`/projects/${projectId}/teams`);
-  }
-}
-
-export const apiService = new ApiService();
+export const apiService=new ApiService();
 export default apiService;

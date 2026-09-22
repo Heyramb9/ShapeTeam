@@ -11,4 +11,7 @@ export const config = {
   mlServiceUrl: process.env.ML_SERVICE_URL || 'http://localhost:8000',
   useMockDb: process.env.USE_MOCK_DB === 'true' || false,
   useMockCache: process.env.USE_MOCK_CACHE === 'true' || false,
+  jwtSecret: process.env.JWT_SECRET || 'local-development-change-me-shapeteam',
+  sessionHours: Number(process.env.SESSION_HOURS || 12),
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
 };

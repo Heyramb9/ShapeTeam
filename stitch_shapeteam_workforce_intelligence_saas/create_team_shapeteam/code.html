@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"on-tertiary":"#ffffff","outline-variant":"#c6c5d0","secondary-fixed-dim":"#b4c5ff","inverse-on-surface":"#eef0ff","primary-fixed-dim":"#b7c4fd","on-tertiary-fixed":"#25005a","secondary-container":"#316bf3","tertiary-fixed-dim":"#d2bbff","outline":"#767680","surface":"#faf8ff","surface-container-low":"#f2f3ff","background":"#faf8ff","on-background":"#131b2e","tertiary-container":"#35007a","on-secondary-container":"#fefcff","primary":"#000f3f","on-tertiary-container":"#a375ff","on-secondary-fixed":"#00174b","on-surface-variant":"#45464f","surface-dim":"#d2d9f4","tertiary-fixed":"#eaddff","on-primary":"#ffffff","surface-container-high":"#e2e7ff","inverse-surface":"#283044","error-container":"#ffdad6","on-primary-fixed-variant":"#374475","surface-container-lowest":"#ffffff","error":"#ba1a1a","on-primary-fixed":"#071747","secondary":"#0051d5","on-error-container":"#93000a","on-error":"#ffffff","primary-fixed":"#dce1ff","on-secondary-fixed-variant":"#003ea8","surface-bright":"#faf8ff","on-primary-container":"#808dc2","on-secondary":"#ffffff","secondary-fixed":"#dbe1ff","surface-variant":"#dae2fd","surface-tint":"#4f5c8e","on-surface":"#131b2e","surface-container-highest":"#dae2fd","inverse-primary":"#b7c4fd","primary-container":"#172554","tertiary":"#1c0047","on-tertiary-fixed-variant":"#5a00c6","surface-container":"#eaedff"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"space-xl":"2rem","margin-mobile":"1rem","gutter-sm":"1rem","margin":"2rem","space-sm":"0.5rem","gutter":"1.5rem","space-md":"1rem","space-xs":"0.25rem","space-lg":"1.5rem"},"fontFamily":{"headline-md":["Manrope"],"display-lg":["Manrope"],"headline-lg":["Manrope"],"title-sm":["Inter"],"metric-val":["Manrope"],"body-lg":["Inter"],"body-sm":["Inter"],"label-sm":["Inter"],"body-md":["Inter"],"headline-lg-mobile":["Manrope"],"headline-sm":["Manrope"],"label-md":["Inter"],"title-md":["Inter"]},"fontSize":{"headline-md":["24px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"600"}],"display-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.015em","fontWeight":"700"}],"title-sm":["14px",{"lineHeight":"20px","fontWeight":"600"}],"metric-val":["28px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"body-sm":["12px",{"lineHeight":"16px","fontWeight":"400"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.03em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"headline-lg-mobile":["26px",{"lineHeight":"34px","letterSpacing":"-0.01em","fontWeight":"700"}],"headline-sm":["20px",{"lineHeight":"28px","letterSpacing":"-0.005em","fontWeight":"600"}],"label-md":["13px",{"lineHeight":"18px","fontWeight":"500"}],"title-md":["16px",{"lineHeight":"24px","fontWeight":"600"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between select-none"><div class="flex flex-col flex-1 min-h-0"><div class="h-16 px-space-md flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.02)]"><div class="flex items-center gap-space-sm"><img alt="ShapeTeam Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UYHw2dSFlhl_AzKqZYJq5x8Y-pTxbfK8sLyDo1-8gcDaUqobO5urZ35dx-JrQu5l1iqZyDmCml61rXWRlWdua3kcm0RLe4ej9LSmuEwCniDC7-IG3pQuhHay5tkmMpoQ75oct-4kbacH-VOEXO4Jw8v6dO9YGJ7IxqocG-4N98XTBFHd-CCXKOl_-GRPA5BamTXSV2MwO6s2MNY6ji4ubEG0290AO636m37iEM4qZtnxwYSLjTl2zsHYY"/><div class="flex flex-col"><span class="font-title-md text-title-md tracking-tight text-primary leading-none">ShapeTeam</span><span class="font-label-sm text-label-sm text-outline tracking-wider uppercase mt-0.5">Enterprise AI</span></div></div></div><div class="flex-1 overflow-y-auto px-space-sm py-space-md"><div class="px-space-sm mb-space-xs font-label-sm text-label-sm uppercase tracking-wider text-outline">Workforce Platform</div><nav class="flex flex-col gap-1" data-active-classes="bg-surface-container-high text-secondary font-title-sm"><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant font-title-sm text-title-sm hover:bg-surface-container-low hover:text-on-surface transition-all group" data-path="dashboard" href="#dashboard"><span class="material-symbols-outlined text-[20px] text-outline group-hover:text-on-surface transition-colors">dashboard</span><span>Dashboard</span></a><a aria-current="page" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all group bg-surface-container-high text-secondary font-title-sm" data-path="create-team" href="#create-team"><span class="material-symbols-outlined text-[20px] text-outline group-hover:text-on-surface transition-colors">group_add</span><span>Create Team</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant font-title-sm text-title-sm hover:bg-surface-container-low hover:text-on-surface transition-all group" data-path="projects" href="#projects"><span class="material-symbols-outlined text-[20px] text-outline group-hover:text-on-surface transition-colors">folder</span><span>Projects</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant font-title-sm text-title-sm hover:bg-surface-container-low hover:text-on-surface transition-all group" data-path="employees" href="#employees"><span class="material-symbols-outlined text-[20px] text-outline group-hover:text-on-surface transition-colors">badge</span><span>Employees</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant font-title-sm text-title-sm hover:bg-surface-container-low hover:text-on-surface transition-all group" data-path="team-analysis" href="#team-analysis"><span class="material-symbols-outlined text-[20px] text-outline group-hover:text-on-surface transition-colors">analytics</span><span>Team Analysis</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant font-title-sm text-title-sm hover:bg-surface-container-low hover:text-on-surface transition-all group" data-path="recommendations" href="#recommendations"><span class="material-symbols-outlined text-[20px] text-outline group-hover:text-on-surface transition-colors">psychology</span><span>Recommendations</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant font-title-sm text-title-sm hover:bg-surface-container-low hover:text-on-surface transition-all group" data-path="reports" href="#reports"><span class="material-symbols-outlined text-[20px] text-outline group-hover:text-on-surface transition-colors">description</span><span>Reports</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant font-title-sm text-title-sm hover:bg-surface-container-low hover:text-on-surface transition-all group" data-path="settings" href="#settings"><span class="material-symbols-outlined text-[20px] text-outline group-hover:text-on-surface transition-colors">settings</span><span>Settings</span></a></nav></div></div><div class="p-space-sm bg-surface-container-low/50 shadow-[0_-1px_4px_rgba(0,0,0,0.02)] flex flex-col gap-space-xs"><a class="flex items-center justify-between px-space-sm py-1.5 rounded-lg text-on-surface-variant font-body-sm text-body-sm hover:bg-surface-container hover:text-on-surface transition-colors" href="#help"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px] text-outline">help_outline</span><span>Help Center</span></div><span class="font-label-sm text-label-sm text-outline">Docs</span></a><div class="p-space-sm rounded-lg bg-surface-container-lowest shadow-[0_1px_3px_0_rgba(15,23,42,0.04)] flex items-center justify-between gap-space-xs"><div class="flex items-center gap-space-sm min-w-0"><img alt="Profile" class="w-8 h-8 rounded-full object-cover shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUMYTUkw2E1_bXUpXTt6waauJIyA4MA7kkyUafwOOb0DLENN2a7qU9G4lX3FNZP0w67ecMJOklXy1yP5s6HhNZcxQvxqcdThIolkwVbFc7sxFg-yf5s3Khj6rSkWIPJ--yrC2iGkvjTeuDPn9m7BuPi5eaUUMiFytsHVcBOZimeUaK43EdqwLX1xP7dZlxOoVtV8_DWKHukb1C9xmvE7mPMY4KddKeii5Zf57DN5oowqmVBOGVK2O3YQ"/><div class="min-w-0 flex flex-col"><span class="font-title-sm text-title-sm text-on-surface truncate leading-tight">Heyramb S.</span><span class="font-label-sm text-label-sm text-on-surface-variant truncate leading-none mt-0.5">Lead Talent Partner</span><span class="font-label-sm text-label-sm text-outline truncate text-[10px] mt-0.5">Acme Global Innovations</span></div></div><button aria-label="Collapse sidebar" class="p-1 text-outline hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-colors shrink-0" type="button"><span class="material-symbols-outlined text-[18px]">keyboard_double_arrow_left</span></button></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-gutter"><div class="flex items-center gap-space-md w-full max-w-lg"><div class="relative w-full"><span class="material-symbols-outlined absolute left-space-sm top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">search</span><input class="w-full h-9 pl-9 pr-16 bg-surface-container-low rounded-lg font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-secondary/20 transition-all" placeholder="Search teams, skills, members..." type="search"/><div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-container-high font-label-sm text-[10px] text-on-surface-variant font-medium pointer-events-none"><span>Cmd</span><span>K</span></div></div><div class="hidden xl:flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-surface-container text-on-surface-variant whitespace-nowrap"><span class="w-2 h-2 rounded-full bg-secondary-container animate-pulse"></span><span class="font-label-sm text-label-sm font-semibold text-primary">ShapeTeam AI v3.2</span><span class="font-label-sm text-label-sm text-outline">• Active</span></div></div><div class="flex items-center gap-space-md"><button aria-label="Notifications" class="relative p-2 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-low transition-colors" type="button"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-error text-on-error font-label-sm text-[10px] leading-4 text-center font-bold">3</span></button><div class="h-5 w-px bg-surface-container-high"></div><button class="flex items-center gap-space-xs px-space-md h-9 bg-secondary text-on-secondary rounded-lg font-title-sm text-title-sm hover:bg-secondary-container transition-colors shadow-[0_1px_3px_0_rgba(15,23,42,0.08)]" type="button"><span class="material-symbols-outlined text-[18px]">add</span><span>Create New Team</span></button><div class="flex items-center pl-space-xs"><img alt="Profile" class="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-surface-container-high" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUMYTUkw2E1_bXUpXTt6waauJIyA4MA7kkyUafwOOb0DLENN2a7qU9G4lX3FNZP0w67ecMJOklXy1yP5s6HhNZcxQvxqcdThIolkwVbFc7sxFg-yf5s3Khj6rSkWIPJ--yrC2iGkvjTeuDPn9m7BuPi5eaUUMiFytsHVcBOZimeUaK43EdqwLX1xP7dZlxOoVtV8_DWKHukb1C9xmvE7mPMY4KddKeii5Zf57DN5oowqmVBOGVK2O3YQ"/></div></div></header><main class="relative pt-16 bg-surface min-h-screen w-full px-gutter"><div class="flex flex-col w-full pb-36">
+<!-- Top Progress Stepper -->
+<div class="w-full bg-surface-container-lowest shadow-sm rounded-xl p-space-md mb-space-lg">
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between text-label-sm font-label-sm uppercase tracking-wider text-outline">
+<span>Step Navigation</span>
+<span class="text-secondary font-semibold">Step 3 of 5 : Candidate Pool Assembly</span>
+</div>
+<!-- Stepper Track -->
+<div class="grid grid-cols-1 md:grid-cols-5 gap-space-sm relative">
+<!-- Step 1: Completed -->
+<div class="flex items-center gap-space-xs p-space-xs rounded-lg bg-surface-container-low transition-all">
+<div class="w-7 h-7 rounded-full bg-secondary text-on-secondary flex items-center justify-center shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm text-on-surface truncate">1. Project Details</span>
+<span class="font-body-sm text-body-sm text-outline truncate">Configured</span>
+</div>
+</div>
+<!-- Step 2: Completed -->
+<div class="flex items-center gap-space-xs p-space-xs rounded-lg bg-surface-container-low transition-all">
+<div class="w-7 h-7 rounded-full bg-secondary text-on-secondary flex items-center justify-center shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm text-on-surface truncate">2. Requirements</span>
+<span class="font-body-sm text-body-sm text-outline truncate">Skills &amp; roles defined</span>
+</div>
+</div>
+<!-- Step 3: Active -->
+<div class="flex items-center gap-space-xs p-space-xs rounded-lg bg-secondary/10 shadow-sm relative overflow-hidden">
+<div class="absolute inset-x-0 bottom-0 h-0.5 bg-secondary"></div>
+<div class="w-7 h-7 rounded-full bg-secondary text-on-secondary font-title-sm text-title-sm flex items-center justify-center shrink-0 shadow-md">
+            3
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm text-secondary truncate font-bold">3. Employee Pool</span>
+<span class="font-body-sm text-body-sm text-secondary/80 truncate">Active Selection</span>
+</div>
+</div>
+<!-- Step 4: Upcoming -->
+<div class="flex items-center gap-space-xs p-space-xs rounded-lg bg-surface-container-lowest opacity-60">
+<div class="w-7 h-7 rounded-full bg-surface-container-high text-on-surface-variant font-title-sm text-title-sm flex items-center justify-center shrink-0">
+            4
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm text-on-surface truncate">4. AI Optimization</span>
+<span class="font-body-sm text-body-sm text-outline truncate">Synergy Matrix</span>
+</div>
+</div>
+<!-- Step 5: Upcoming -->
+<div class="flex items-center gap-space-xs p-space-xs rounded-lg bg-surface-container-lowest opacity-60">
+<div class="w-7 h-7 rounded-full bg-surface-container-high text-on-surface-variant font-title-sm text-title-sm flex items-center justify-center shrink-0">
+            5
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm text-on-surface truncate">5. Review &amp; Launch</span>
+<span class="font-body-sm text-body-sm text-outline truncate">Finalization</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Step Header & Context Ribbon -->
+<div class="flex flex-col xl:flex-row xl:items-end justify-between gap-space-md mb-space-lg">
+<div class="flex flex-col gap-space-xs max-w-3xl">
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed w-fit font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+<span>Algorithmic Workforce Assembler</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tight">Step 3: Select Candidate Pool &amp; Filter Talents</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Select qualified candidates or let ShapeTeam AI automatically score compatibility against project requirements.</p>
+</div>
+<!-- Project Context Badge Strip -->
+<div class="bg-surface-container-lowest shadow-sm rounded-xl p-space-sm flex flex-wrap items-center gap-space-md self-start xl:self-auto">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-outline">Target Project</span>
+<div class="flex items-center gap-1.5 font-title-sm text-title-sm text-primary">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="truncate max-w-[220px]">NextGen Autonomous Analytics Engine</span>
+</div>
+</div>
+<div class="w-px h-8 bg-surface-container"></div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-outline">Capacity Needed</span>
+<span class="font-title-sm text-title-sm text-on-surface font-semibold">6 Team Members</span>
+</div>
+<div class="w-px h-8 bg-surface-container"></div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-outline">Urgency</span>
+<span class="px-2 py-0.5 rounded bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold w-fit">High Priority</span>
+</div>
+<div class="w-px h-8 bg-surface-container"></div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-outline">Target Start</span>
+<span class="font-title-sm text-title-sm text-on-surface">Oct 15, 2025</span>
+</div>
+</div>
+</div>
+<!-- Filter & Parameter Toolbar -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md mb-space-lg flex flex-col gap-space-md">
+<div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-md">
+<!-- Search Input -->
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-space-sm top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+<input class="w-full h-10 pl-10 pr-space-md bg-surface-container-low rounded-lg font-body-md text-body-md text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-secondary/20 transition-all shadow-inner" id="talentSearch" placeholder="Search candidates by name, specialty, or specific capability..." type="text"/>
+</div>
+<!-- Quick Filter Dropdowns -->
+<div class="flex flex-wrap items-center gap-space-sm">
+<!-- Department Select -->
+<div class="relative min-w-[170px]">
+<select class="w-full h-10 pl-space-sm pr-8 bg-surface-container-low text-on-surface font-body-sm text-body-sm rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-secondary/20">
+<option value="all">All Departments</option>
+<option value="eng">Engineering</option>
+<option value="prod">Product</option>
+<option value="design">Design (UX/UI)</option>
+<option value="data">Data Science &amp; AI</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline text-[18px]">expand_more</span>
+</div>
+<!-- Experience Select -->
+<div class="relative min-w-[150px]">
+<select class="w-full h-10 pl-space-sm pr-8 bg-surface-container-low text-on-surface font-body-sm text-body-sm rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-secondary/20">
+<option value="all">All Seniorities</option>
+<option value="lead">Lead / Principal</option>
+<option value="senior">Senior (5+ yrs)</option>
+<option value="mid">Mid-level (3-5 yrs)</option>
+<option value="junior">Junior</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline text-[18px]">expand_more</span>
+</div>
+<!-- Timezone Select -->
+<div class="relative min-w-[150px]">
+<select class="w-full h-10 pl-space-sm pr-8 bg-surface-container-low text-on-surface font-body-sm text-body-sm rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-secondary/20">
+<option value="all">Global (Any UTC)</option>
+<option value="us">Americas (EST/PST)</option>
+<option value="eu">EMEA (GMT/CET)</option>
+<option value="apac">APAC (SGT/IST)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline text-[18px]">public</span>
+</div>
+<button class="h-10 px-3 flex items-center gap-1.5 rounded-lg bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+<span>More Filters</span>
+</button>
+</div>
+</div>
+<!-- Sliders Sub-row: Availability & Workload Capacity -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-md pt-space-sm bg-surface-container-low/40 p-space-sm rounded-lg">
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between items-center text-label-sm font-label-sm">
+<span class="text-on-surface-variant font-medium">Free Bandwidth Threshold</span>
+<span class="text-secondary font-bold" id="bandwidthVal">&gt; 70% Free</span>
+</div>
+<input class="w-full accent-secondary h-1.5 bg-surface-container rounded-lg cursor-pointer" max="100" min="0" oninput="document.getElementById('bandwidthVal').textContent = '&gt; ' + this.value + '% Free'" type="range" value="70"/>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between items-center text-label-sm font-label-sm">
+<span class="text-on-surface-variant font-medium">Max Workload Tolerance</span>
+<span class="text-primary font-bold" id="workloadVal">&lt; 80% Capacity</span>
+</div>
+<input class="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer" max="100" min="20" oninput="document.getElementById('workloadVal').textContent = '&lt; ' + this.value + '% Capacity'" type="range" value="80"/>
+</div>
+<div class="flex items-center justify-between gap-space-sm md:col-span-2 xl:col-span-2 bg-surface-container-lowest px-space-md py-2 rounded-lg shadow-sm">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-full bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-sm text-title-sm text-primary leading-tight">Neural Matching Weights Active</span>
+<span class="font-label-sm text-label-sm text-outline">Skill coverage 45% • Synergy index 35% • Past co-delivery 20%</span>
+</div>
+</div>
+<button class="text-secondary hover:underline font-label-sm text-label-sm font-semibold shrink-0" type="button">Adjust Weights</button>
+</div>
+</div>
+</div>
+<!-- Interactive Talent Table -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+<!-- Table Header Info Bar -->
+<div class="p-space-md flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-low/20">
+<div class="flex items-center gap-space-sm">
+<span class="font-title-sm text-title-sm text-primary">Candidate Pool</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold">24 matches found</span>
+</div>
+<div class="flex items-center gap-space-sm text-body-sm font-body-sm text-outline">
+<span>Displaying Top 6 Ranked by Compatibility</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+<button class="text-secondary font-medium hover:underline flex items-center gap-0.5" type="button">
+<span>Sort by AI Rank</span>
+<span class="material-symbols-outlined text-[16px]">swap_vert</span>
+</button>
+</div>
+</div>
+<!-- Responsive Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[900px]">
+<thead>
+<tr class="bg-surface-container-low text-outline uppercase font-label-sm text-label-sm tracking-wider">
+<th class="py-3 px-space-md w-12 text-center">
+<input checked="" class="rounded border-outline-variant text-secondary focus:ring-secondary h-4 w-4 cursor-pointer" type="checkbox"/>
+</th>
+<th class="py-3 px-space-md">Candidate &amp; Role</th>
+<th class="py-3 px-space-md">Department</th>
+<th class="py-3 px-space-md">Verified Capabilities</th>
+<th class="py-3 px-space-md text-center">Experience</th>
+<th class="py-3 px-space-md">Bandwidth &amp; Workload</th>
+<th class="py-3 px-space-md text-right">AI Compatibility</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low font-body-md text-body-md">
+<!-- Row 1: Dr. Elena Vance -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="py-space-md px-space-md text-center">
+<input checked="" class="talent-checkbox rounded border-outline-variant text-secondary focus:ring-secondary h-4 w-4 cursor-pointer" data-score="98" type="checkbox"/>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm ring-2 ring-surface-container" data-alt="Portrait photo of Dr. Elena Vance, female senior artificial intelligence researcher with glasses, warm professional corporate lighting, neutral soft background, modern high-end office ambiance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDa678fTRD6lmGBwvEDSifFbEh761JVACH4-X7KoC3ZBAPXeY3ZRWg957idQF_mJwBc8SQiQcylGEFQi3PuXN2umU6Rac-XKKBeS9Hx4sPntj3XBcatnh2AXJea8W7___h7F6hwVeRPh--kQ85mNsOgiD2tVb9DKv-Ps4mf33CiWq0F8t1w8YY0wAVY5leUxOppMLDjxa2ZLyKR4HQUavOhMG6sxamhpIu1OmwjCyU4laUuOeMHcefLbA"/>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-title-sm text-title-sm text-primary font-bold">Dr. Elena Vance</span>
+<span class="material-symbols-outlined text-secondary text-[16px]" title="ShapeTeam Verified Pioneer">verified</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Principal AI Engineer</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-1 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">Data &amp; AI</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-wrap gap-1 max-w-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">PyTorch</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">LLMs</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Distributed Systems</span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-center">
+<span class="font-title-sm text-title-sm text-on-surface font-semibold">9 yrs</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-col gap-1 w-36">
+<div class="flex justify-between font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">85% Free</span>
+<span class="text-outline">15% load</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 85%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<div class="inline-flex flex-col items-end">
+<span class="px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-title-sm text-title-sm font-bold flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+<span>98% Match</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary font-semibold mt-0.5">High Affinity Pill</span>
+</div>
+</td>
+</tr>
+<!-- Row 2: Marcus Chen -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="py-space-md px-space-md text-center">
+<input checked="" class="talent-checkbox rounded border-outline-variant text-secondary focus:ring-secondary h-4 w-4 cursor-pointer" data-score="94" type="checkbox"/>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm ring-2 ring-surface-container" data-alt="Professional headshot of Marcus Chen, Asian male senior software architect in late 30s wearing minimal slate navy apparel, confident demeanor in a clean architectural glass tech headquarters." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQcah4JM2Sdnfk6_4hB_j47Nco5B1mDpK6nIBhBk0f_PLDToj3jY8WmFsXmdXSE68RE5mCL_XtNiCDXYvm-X7Dlf43LtffvW_9k_q1IiaKd-1Cgcqm6pPhlhE5DBCEkg04Mt9MpGKToL13PRm5tKr0lAeNkrxByiJGWwxvLGo_rHg5WVhh650XqFNTDim3_mKEHKmdFEwwq0CKB1m0ogb7Oz9PIbMEBsNEc3lvtf9RlLT9ouqbkKuiEg"/>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm text-primary font-bold">Marcus Chen</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Senior Full-Stack Architect</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-1 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">Engineering</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-wrap gap-1 max-w-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">React</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Node.js</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">GraphQL</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Kubernetes</span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-center">
+<span class="font-title-sm text-title-sm text-on-surface font-semibold">7 yrs</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-col gap-1 w-36">
+<div class="flex justify-between font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">75% Free</span>
+<span class="text-outline">25% load</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 75%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<div class="inline-flex flex-col items-end">
+<span class="px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-title-sm text-title-sm font-bold flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+<span>94% Match</span>
+</span>
+<span class="font-label-sm text-label-sm text-outline font-medium mt-0.5">High Synergy</span>
+</div>
+</td>
+</tr>
+<!-- Row 3: Sarah Jenkins -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="py-space-md px-space-md text-center">
+<input checked="" class="talent-checkbox rounded border-outline-variant text-secondary focus:ring-secondary h-4 w-4 cursor-pointer" data-score="92" type="checkbox"/>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm ring-2 ring-surface-container" data-alt="Studio portrait of Sarah Jenkins, lead product designer, creative smiling woman with auburn hair in an architectural studio setting, soft daylighting, high quality corporate headshot." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXDBA2Zy6aRZdPGOvSiSsuUlHUVSCZVVALnHvR6bZnq7IGSOtXzdeignIeptQT8S08H91LGwjY0Kt3x7xQu7rtYze30uFiRqR2MCHFDHwVF4h1M8215bYn6bq6u2EWH4TcTe3yHSom_bdcqGHOVmzdAVcb0UXukAPrPcNpXG3ckp7ZQVLc6CC2f9D9ivZGH4PH9NCjvE_xtZJLp4hwH5Sy7fQ_xebtSNZ4cG0_zkzMCWGkKPA5Vk8kIw"/>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm text-primary font-bold">Sarah Jenkins</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Lead Product Designer</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-1 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">UX/UI</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-wrap gap-1 max-w-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Design Systems</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Prototyping</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">User Research</span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-center">
+<span class="font-title-sm text-title-sm text-on-surface font-semibold">6 yrs</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-col gap-1 w-36">
+<div class="flex justify-between font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">90% Free</span>
+<span class="text-outline">10% load</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 90%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<div class="inline-flex flex-col items-end">
+<span class="px-2.5 py-1 rounded-full bg-surface-container-high text-primary font-title-sm text-title-sm font-bold flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+<span>92% Match</span>
+</span>
+<span class="font-label-sm text-label-sm text-outline font-medium mt-0.5">Design Lead Fit</span>
+</div>
+</td>
+</tr>
+<!-- Row 4: Tariq Al-Mansoor -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="py-space-md px-space-md text-center">
+<input checked="" class="talent-checkbox rounded border-outline-variant text-secondary focus:ring-secondary h-4 w-4 cursor-pointer" data-score="89" type="checkbox"/>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm ring-2 ring-surface-container" data-alt="Middle Eastern male infrastructure architect Tariq Al-Mansoor wearing charcoal collared shirt, sharp friendly expression, illuminated by soft computer displays in a modern technology center." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0EejVUl9o3weXOaNem0Xg-UePEXLc8o6mqoAj7B0mHYJDzgin4N-0iV1uL_l0Ny56yJ3BL7-HftrwSUXzK8Z1alF9uZy3FKHCPCZEoiT4c6-9Ub6Qf7PQQWFc5-na45ny038pLJQUFH6wJGoWDwOzEGSyrSjU_Qh4kMpu6wdushtv9omIDc69PH1ifzSVIvCFr2oAW6Vd30it2aKA3UoY6c4aQ7O3Sge7k5q8TMd3Na2kF7JE2GCYmw"/>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm text-primary font-bold">Tariq Al-Mansoor</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Staff DevOps Specialist</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-1 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">Infrastructure</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-wrap gap-1 max-w-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Terraform</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">AWS</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">CI/CD</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Observability</span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-center">
+<span class="font-title-sm text-title-sm text-on-surface font-semibold">8 yrs</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-col gap-1 w-36">
+<div class="flex justify-between font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">60% Free</span>
+<span class="text-outline">40% load</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 60%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<div class="inline-flex flex-col items-end">
+<span class="px-2.5 py-1 rounded-full bg-surface-container-high text-primary font-title-sm text-title-sm font-bold flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+<span>89% Match</span>
+</span>
+<span class="font-label-sm text-label-sm text-outline font-medium mt-0.5">Infra Backbone</span>
+</div>
+</td>
+</tr>
+<!-- Row 5: Maya Patel -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="py-space-md px-space-md text-center">
+<input checked="" class="talent-checkbox rounded border-outline-variant text-secondary focus:ring-secondary h-4 w-4 cursor-pointer" data-score="91" type="checkbox"/>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm ring-2 ring-surface-container" data-alt="South Asian female senior data analyst Maya Patel, stylish business casual, sitting in an open-concept bright tech enterprise collaborative lounge, crisp natural light." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_1vRmuIzjjeR0X2Ul-oZdjXvffR7YDrQ3AzmDW_iL0ntVXg1PGEul4guf1pxPUqJmjYebatuFVfGOn9_osjo6rQqQuBKK8YVf92MUEJE59z3f3fqCLj9UYCUs32BWbM2Fg-MLyAqiVjazqV25hwyF4PfqCNu3fe6r0h_nI6GbLMYrJiWJ6YUsy_bbSzRMcAhX5f5RdgRkmErPje2EHjfYj1ZYCHBnuBIf73aDreuu9aijYKh3LkoB1A"/>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm text-primary font-bold">Maya Patel</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Senior Data Analyst</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-1 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">Analytics</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-wrap gap-1 max-w-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">SQL</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Python</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Tableau</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Stats Modeling</span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-center">
+<span class="font-title-sm text-title-sm text-on-surface font-semibold">5 yrs</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-col gap-1 w-36">
+<div class="flex justify-between font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">80% Free</span>
+<span class="text-outline">20% load</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 80%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<div class="inline-flex flex-col items-end">
+<span class="px-2.5 py-1 rounded-full bg-surface-container-high text-primary font-title-sm text-title-sm font-bold flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+<span>91% Match</span>
+</span>
+<span class="font-label-sm text-label-sm text-outline font-medium mt-0.5">High Domain Fit</span>
+</div>
+</td>
+</tr>
+<!-- Row 6: Liam O'Connor (Unchecked) -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group opacity-85">
+<td class="py-space-md px-space-md text-center">
+<input class="talent-checkbox rounded border-outline-variant text-secondary focus:ring-secondary h-4 w-4 cursor-pointer" data-score="86" type="checkbox"/>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex items-center gap-space-sm">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm ring-2 ring-surface-container" data-alt="Portrait of Liam O'Connor, young Caucasian male frontend software engineer with friendly approachable expression, crisp professional lighting, modern minimalist office backdrop." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNTJYHggX00B4VOuQ1D1t3LhlDDtIt-h_3uUdUxsHQ5qvCRY8ONF_Z9Eat4d-r0Ss8G74RdGpP63rNlc4_TDAhBbjzS4fdmZOfGq0Uobjhfbg775awQtf0rsVj0kzz_yEQ1OGCsK85aYivnXmOEy_Nz1mQM-OyUTBDjYRG5_SjVMtaUazfgVgyjyD717MjKz7WODmJbOgm17qv2tTXq_-ZYFx7oW9p3EOV7_4okPuMWIKImSvt1eEKUw"/>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm text-primary font-bold">Liam O'Connor</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Frontend Engineer</span>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md">
+<span class="px-2 py-1 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">Engineering</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-wrap gap-1 max-w-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">TypeScript</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Tailwind</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">WebGL</span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-center">
+<span class="font-title-sm text-title-sm text-on-surface font-semibold">4 yrs</span>
+</td>
+<td class="py-space-md px-space-md">
+<div class="flex flex-col gap-1 w-36">
+<div class="flex justify-between font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">100% Free</span>
+<span class="text-outline">0% load</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 100%;"></div>
+</div>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<div class="inline-flex flex-col items-end">
+<span class="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-title-sm text-title-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+<span>86% Match</span>
+</span>
+<span class="font-label-sm text-label-sm text-outline font-medium mt-0.5">Potential Reserve</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Pagination / Helper Note -->
+<div class="p-space-sm bg-surface-container-low/30 flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-outline">Showing 6 candidate records evaluated from 142 total enterprise employees</span>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 text-label-sm font-label-sm rounded bg-surface-container-lowest shadow-sm text-on-surface hover:bg-surface-container transition-colors" type="button">Previous</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm rounded bg-surface-container-lowest shadow-sm text-on-surface hover:bg-surface-container transition-colors" type="button">Next Pool</button>
+</div>
+</div>
+</div>
+<!-- Bottom Action Floating Footer Bar -->
+<footer class="fixed bottom-0 left-64 right-0 bg-surface-container-lowest/95 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-30 px-gutter py-3">
+<div class="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-space-md">
+<!-- Selection & Synergy Metrics Left -->
+<div class="flex items-center gap-space-lg w-full md:w-auto justify-between md:justify-start">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-xl bg-secondary-fixed text-secondary flex items-center justify-center font-title-sm text-title-sm font-bold shadow-inner">
+<span id="selectedCountDisplay">5</span>/6
+          </div>
+<div class="flex flex-col">
+<span class="font-title-sm text-title-sm text-primary font-bold leading-tight">Candidates Selected</span>
+<span class="font-label-sm text-label-sm text-outline">1 more needed for target composition</span>
+</div>
+</div>
+<div class="h-8 w-px bg-surface-container hidden sm:block"></div>
+<!-- Projected Team Compatibility -->
+<div class="flex items-center gap-space-sm">
+<!-- Inline Radial Spark SVG -->
+<div class="relative w-9 h-9 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-container" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
+<path class="text-secondary transition-all duration-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="94.8, 100" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+<span class="absolute material-symbols-outlined text-secondary text-[16px]">auto_awesome</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1">
+<span class="font-title-sm text-title-sm text-primary font-bold">94.8%</span>
+<span class="px-1.5 py-0.2 rounded bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-[10px] font-bold">Optimal</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline">Projected Team Compatibility</span>
+</div>
+</div>
+</div>
+<!-- Action Buttons Right -->
+<div class="flex items-center gap-space-sm w-full md:w-auto justify-end">
+<button class="px-space-md h-10 rounded-lg text-on-surface-variant font-title-sm text-title-sm hover:bg-surface-container-low transition-colors" type="button">
+          Save Draft
+        </button>
+<button class="px-space-md h-10 rounded-lg bg-surface-container-low text-on-surface font-title-sm text-title-sm hover:bg-surface-container transition-colors flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+<span>Back to Requirements</span>
+</button>
+<!-- Tooltip Parent Container -->
+<div class="relative group/ai">
+<button class="px-space-lg h-10 bg-secondary text-on-secondary hover:bg-secondary-container rounded-lg font-title-sm text-title-sm transition-all shadow-md hover:shadow-lg flex items-center gap-space-xs" type="button">
+<span class="material-symbols-outlined text-[18px] animate-pulse">auto_fix_high</span>
+<span>Run AI Optimization Algorithm</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+<!-- Informational AI Tooltip -->
+<div class="absolute bottom-full right-0 mb-3 hidden group-hover/ai:flex flex-col w-72 p-space-sm rounded-xl bg-primary text-on-primary shadow-xl pointer-events-none transition-all">
+<div class="flex items-center gap-1.5 mb-1 text-secondary-fixed">
+<span class="material-symbols-outlined text-[16px]">psychology</span>
+<span class="font-title-sm text-title-sm font-semibold">ShapeTeam AI Engine</span>
+</div>
+<p class="font-body-sm text-body-sm text-surface-dim">
+              AI will optimize workload balance, minimize context switching, and evaluate personality synergy in Step 4 before team commit.
+            </p>
+<div class="absolute -bottom-1.5 right-12 w-3 h-3 bg-primary rotate-45"></div>
+</div>
+</div>
+</div>
+</div>
+</footer>
+<script>
+    // Lightweight interactivity for selection metrics
+    document.querySelectorAll('.talent-checkbox').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const checkedBoxes = document.querySelectorAll('.talent-checkbox:checked');
+        const countDisplay = document.getElementById('selectedCountDisplay');
+        if(countDisplay) {
+          countDisplay.textContent = checkedBoxes.length;
+        }
+      });
+    });
+  </script>
+</div></main></div></body></html>

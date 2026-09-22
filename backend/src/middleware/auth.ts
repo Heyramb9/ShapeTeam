@@ -1,0 +1,11 @@
+import { NextFunction, Request, Response } from 'express';
+import authService from '../services/authService';
+import platformStore from '../services/platformStore';
+import { ROLE_PERMISSIONS, UserRole } from '../types/domain';
+
+export const authenticate=(req:Request,res:Response,next:NextFunction)=>{try{const header=req.headers.authorization;const token=header?.startsWith('Bearer ')?header.slice(7):'';if(!token)return res.status(401).json({success:false,code:'UNAUTHENTICATED',message:'Please sign in to continue.'});const payload=authService.verifySession(token);const user=platformStore.read('users').find(item=>item.id===payload.sub&&item.organizationId===payload.org);if(!user||user.status!=='ACTIVE')return res.status(401).json({success:false,code:'SESSION_INVALID',message:'Your session is no longer active.'});req.user=user;req.token=token;next()}catch(error){return res.status(401).json({success:false,code:'SESSION_EXPIRED',message:error instanceof Error?error.message:'Session expired.'})}};
+export const authorize=(...permissions:string[])=>(req:Request,res:Response,next:NextFunction)=>{if(!req.user)return res.status(401).json({success:false,message:'Authentication required.'});const granted=ROLE_PERMISSIONS[req.user.role]||[];const allowed=permissions.some(permission=>granted.includes(permission)||granted.includes(`${permission}:assigned`)||granted.includes(`${permission}:self`));if(!allowed)return res.status(403).json({success:false,code:'FORBIDDEN',message:'You do not have permission to perform this action.'});next()};
+export const allowRoles=(...roles:UserRole[])=>(req:Request,res:Response,next:NextFunction)=>req.user&&roles.includes(req.user.role)?next():res.status(403).json({success:false,code:'FORBIDDEN',message:'This action is not available for your role.'});
+
+const attempts=new Map<string,{count:number;reset:number}>();
+export const rateLimit=(limit=20,windowMs=60_000)=>(req:Request,res:Response,next:NextFunction)=>{const key=`${req.ip}:${req.path}`;const now=Date.now();const state=attempts.get(key);if(!state||state.reset<now){attempts.set(key,{count:1,reset:now+windowMs});return next()}if(state.count>=limit)return res.status(429).json({success:false,message:'Too many requests. Please wait and try again.'});state.count++;next()};

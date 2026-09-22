@@ -1,21 +1,50 @@
 import { Router } from 'express';
-import * as candidateController from '../controllers/candidateController';
-import * as projectController from '../controllers/projectController';
-import * as teamController from '../controllers/teamController';
+import * as auth from '../controllers/authController';
+import * as platform from '../controllers/platformController';
+import { authenticate, authorize, rateLimit } from '../middleware/auth';
 
-const router = Router();
-
-// Candidates Routes
-router.post('/candidates/sync', candidateController.syncCandidates);
-router.get('/candidates', candidateController.getCandidates);
-
-// Projects Routes
-router.post('/projects', projectController.createProject);
-router.get('/projects', projectController.getProjects);
-router.get('/projects/:id', projectController.getProjectById);
-
-// Teams Routes
-router.post('/teams/generate', teamController.generateTeam);
-router.get('/projects/:projectId/teams', teamController.getTeamsByProject);
-
+const router=Router();
+router.post('/auth/signup',rateLimit(10,60_000),auth.signup);
+router.post('/auth/login',rateLimit(10,60_000),auth.login);
+router.post('/auth/forgot-password',rateLimit(5,60_000),auth.forgot);
+router.post('/auth/reset-password',rateLimit(5,60_000),auth.reset);
+router.post('/auth/verify-email',rateLimit(10,60_000),auth.verifyEmail);
+router.post('/auth/accept-invitation',rateLimit(10,60_000),auth.acceptInvitation);
+router.use(authenticate);
+router.get('/auth/me',auth.me);
+router.post('/auth/logout',auth.logout);
+router.get('/dashboard',platform.dashboard);
+router.get('/dataset/status',platform.datasetStatus);
+router.post('/dataset/import',rateLimit(5,60_000),authorize('users:manage','employees:manage'),platform.importDataset);
+router.get('/permissions',authorize('roles:manage'),platform.permissions);
+router.get('/organization',platform.getOrganization);
+router.patch('/organization',authorize('organization:manage'),platform.updateOrganization);
+router.post('/organization/invitations',authorize('users:manage'),platform.invite);
+router.get('/users',authorize('users:read','users:manage','employees:manage'),platform.listUsers);
+router.post('/users',authorize('users:manage','employees:manage'),platform.createUser);
+router.patch('/users/:id',authorize('users:manage','employees:manage'),platform.updateUser);
+router.get('/profile',platform.myProfile);
+router.patch('/profile',platform.updateMyProfile);
+router.get('/departments',platform.departments);
+router.post('/departments',authorize('departments:manage'),platform.createDepartment);
+router.get('/projects',authorize('projects:read'),platform.listProjects);
+router.post('/projects',authorize('projects:write'),platform.createProject);
+router.get('/projects/:id',authorize('projects:read'),platform.projectDetail);
+router.patch('/projects/:id',authorize('projects:write'),platform.updateProject);
+router.post('/projects/:id/recommendations',authorize('recommendations:generate'),platform.generateRecommendations);
+router.get('/recommendations',platform.listRecommendations);
+router.post('/recommendations/:id/submit',authorize('recommendations:submit','recommendations:generate'),platform.submitRecommendation);
+router.post('/recommendations/:id/approve',authorize('recommendations:review'),platform.approveRecommendation);
+router.post('/recommendations/:id/reject',authorize('recommendations:review'),platform.rejectRecommendation);
+router.post('/recommendations/:id/request-changes',authorize('recommendations:review'),platform.requestChanges);
+router.get('/teams',authorize('teams:read'),platform.listTeams);
+router.get('/teams/:id/analysis',platform.teamAnalysis);
+router.post('/teams/:id/feedback',authorize('feedback:write'),platform.submitFeedback);
+router.get('/ai-configuration',authorize('ai:manage'),platform.getAIConfiguration);
+router.put('/ai-configuration',authorize('ai:manage'),platform.updateAIConfiguration);
+router.get('/notifications',platform.notifications);
+router.post('/notifications/:id/read',platform.markNotification);
+router.get('/audit-logs',authorize('audit:read'),platform.auditLogs);
+router.get('/reports/:type/preview',authorize('reports:read'),platform.reportPreview);
+router.get('/reports/:type/export',authorize('reports:read'),platform.reportExport);
 export default router;
