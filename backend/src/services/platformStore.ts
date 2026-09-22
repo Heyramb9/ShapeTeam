@@ -3,7 +3,10 @@ import path from 'path';
 import crypto from 'crypto';
 import { AIConfiguration, AuditLog, Department, Organization, PlatformData, User } from '../types/domain';
 
-const DATA_DIR=path.join(__dirname,'../../data');
+// Vercel functions can write only to /tmp; keep the repository data path for local runs.
+const DATA_DIR=process.env.VERCEL
+  ? path.join('/tmp','shapeteam-data')
+  : path.join(__dirname,'../../data');
 const DATA_FILE=path.join(DATA_DIR,'platform.json');
 const emptyData=():PlatformData=>({organizations:[],departments:[],users:[],skills:[],userSkills:[],projects:[],requirements:[],teams:[],teamMembers:[],recommendations:[],aiConfigurations:[],notifications:[],auditLogs:[],invitations:[],tokens:[],feedback:[]});
 
