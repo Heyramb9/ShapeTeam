@@ -5,6 +5,7 @@ import apiRouter from './routes/api';
 import authService from './services/authService';
 
 const app = express();
+const initialization = authService.ensureDemoData();
 
 // Set up CORS
 app.use(cors());
@@ -18,6 +19,9 @@ app.use((_req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'same-origin');
   next();
+});
+app.use((_req, _res, next) => {
+  initialization.then(() => next()).catch(next);
 });
 
 // Simple health check endpoint
@@ -35,8 +39,8 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Resource not found.' });
 });
 
-// Start the server
-authService.ensureDemoData().then(() => app.listen(config.port, () => {
+// Start a local server only; Vercel uses the exported Express app as a function.
+if (!process.env.VERCEL) initialization.then(() => app.listen(config.port, () => {
   console.log(`==================================================`);
   console.log(`🟢 ShapeTeam Core Backend started on port ${config.port}`);
   console.log(`🔗 API Gateway: http://localhost:${config.port}`);
@@ -45,6 +49,11 @@ authService.ensureDemoData().then(() => app.listen(config.port, () => {
 })).catch((error) => {
   console.error('Unable to initialize ShapeTeam:', error);
   process.exitCode = 1;
+});
+
+app.use((error:Error, _req:express.Request, res:express.Response, _next:express.NextFunction) => {
+  console.error('ShapeTeam request failed:', error);
+  res.status(500).json({ success: false, message: 'The backend could not complete this request.' });
 });
 
 export default app;
