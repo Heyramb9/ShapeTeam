@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const API_BASE_URL=process.env.NEXT_PUBLIC_API_URL||(
-  process.env.NODE_ENV==='production' ? '/api/backend' : 'http://localhost:5000/api'
-);
+const configuredApiUrl=process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL=process.env.NODE_ENV==='production'
+  ? (configuredApiUrl&&!configuredApiUrl.includes('localhost') ? configuredApiUrl : '/api/backend')
+  : (configuredApiUrl||'http://localhost:5000/api');
 export type UserRole='ORGANIZATION_ADMIN'|'HR_MANAGER'|'PROJECT_MANAGER'|'TEAM_LEAD'|'EMPLOYEE';
 export interface SessionUser{id:string;organizationId:string;name:string;email:string;role:UserRole;departmentId:string|null;jobTitle:string;experienceYears:number;availabilityPercentage:number;currentWorkloadPercentage:number;behaviorScore:number;status:string;emailVerified:boolean;permissions:string[]}
 export interface Organization{id:string;name:string;industry:string;size:string;settings:Record<string,unknown>}

@@ -26,9 +26,9 @@ app.get('/health', (req, res) => {
 });
 
 // Mount main API routes
-app.use('/api', apiRouter);
 // Keep the service-prefixed path available when deployed behind Vercel Services.
 app.use('/api/backend', apiRouter);
+app.use('/api', apiRouter);
 
 // Fallback for page not found
 app.use((req, res) => {
