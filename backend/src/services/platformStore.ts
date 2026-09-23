@@ -4,7 +4,8 @@ import crypto from 'crypto';
 import { AIConfiguration, AuditLog, Department, Organization, PlatformData, User } from '../types/domain';
 
 // Vercel functions can write only to /tmp; keep the repository data path for local runs.
-const DATA_DIR=process.env.VERCEL
+const isServerlessRuntime=Boolean(process.env.VERCEL)||(process.env.NODE_ENV==='production'&&process.platform!=='win32');
+const DATA_DIR=isServerlessRuntime
   ? path.join('/tmp','shapeteam-data')
   : path.join(__dirname,'../../data');
 const DATA_FILE=path.join(DATA_DIR,'platform.json');
