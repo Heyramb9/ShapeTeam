@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: shapeteam-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: USE_MOCK_DB
+        value: "true"
+      - key: USE_MOCK_CACHE
+        value: "true"
+      - key: CLERK_SECRET_KEY
+        sync: false
