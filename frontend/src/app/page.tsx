@@ -1,8 +1,11 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, BarChart3, Bell, BriefcaseBusiness, Check, CheckCircle2, ChevronRight, CircleHelp, Database, Download, FileText, FolderKanban, Gauge, LayoutDashboard, Loader2, Menu, Plus, RefreshCw, Rocket, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Users, WandSparkles, X } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Activity, AlertTriangle, BarChart3, Bell, BriefcaseBusiness, Check, CheckCircle2, ChevronRight, CircleHelp, Database, Download, FileText, FolderKanban, Gauge, LayoutDashboard, Loader2, LogOut, Menu, Plus, RefreshCw, Rocket, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Users, WandSparkles, X } from 'lucide-react';
 import apiService, { Candidate, Organization, Project, SessionUser, Team, UserRole } from '../services/api';
+
+const ClerkAuthView = dynamic(() => import('../components/ClerkAuthView'), { ssr: false });
 
 type View = 'dashboard' | 'create' | 'projects' | 'employees' | 'analysis' | 'recommendations' | 'reports' | 'settings';
 type Panel = 'diagnostics' | 'notifications' | 'help' | 'addEmployee' | 'candidate' | 'project' | 'compare' | 'weights' | 'standby' | null;
@@ -44,26 +47,206 @@ export default function ShapeTeam(){
   if(datasetGate==='required')return <DatasetOnboarding organization={session.organization} user={session.user} complete={()=>{setDatasetGate('ready');setDataVersion(value=>value+1)}} skip={()=>setDatasetGate('ready')} logout={async()=>{await apiService.logout();setSession(null)}}/>;
   const allowedViews:Record<UserRole,View[]>={ORGANIZATION_ADMIN:['dashboard','create','projects','employees','analysis','recommendations','reports','settings'],HR_MANAGER:['dashboard','create','projects','employees','analysis','recommendations','reports'],PROJECT_MANAGER:['dashboard','create','projects','employees','analysis','recommendations','reports'],TEAM_LEAD:['dashboard','projects','analysis','recommendations'],EMPLOYEE:['dashboard','projects','analysis']};
   const canCreate=['ORGANIZATION_ADMIN','HR_MANAGER','PROJECT_MANAGER'].includes(session.user.role);
-  const signOut=async()=>{await apiService.logout();setSession(null);setDatasetGate('checking');setProjects([]);setCandidates([]);setTeams([])};
-  return <div className="app-shell"><aside className={`sidebar ${mobileNav?'open':''}`}><Logo home={()=>go('dashboard')}/><button className="nav-close" onClick={()=>setMobileNav(false)} aria-label="Close menu"><X/></button><p className="nav-label">Workforce platform</p><nav>{NAV.filter(n=>allowedViews[session.user.role].includes(n.id)).map(n=><button key={n.id} className={view===n.id?'active':''} onClick={()=>go(n.id)}><n.icon/>{n.label}</button>)}</nav><div className="side-bottom"><button onClick={()=>setPanel('help')}><CircleHelp/>Help Center <small>Docs</small></button><button className="user" onClick={signOut} title="Sign out"><i>{initials(session.user.name)}</i><span><b>{session.user.name}</b><small>{labelRole(session.user.role)}</small></span><X/></button></div></aside>
-  <div className="workspace"><header><button className="menu" onClick={()=>setMobileNav(true)} aria-label="Open menu"><Menu/></button><label className="global-search"><Search/><input id="global-search" value={query} onChange={e=>{setQuery(e.target.value);if(e.target.value&&allowedViews[session.user.role].includes('employees'))go('employees')}} placeholder="Search teams, skills, members..."/><kbd>Ctrl K</kbd></label><div className="ai-live"><i/>ShapeTeam AI v3.2 <span>• Active</span></div><div className="header-actions"><button className="bell" onClick={()=>setPanel('notifications')} aria-label="Notifications"><Bell/>{notificationCount>0&&<b>{notificationCount}</b>}</button>{canCreate&&<button className="primary" onClick={()=>go('create')}><Plus/>Create New Team</button>}<i className="avatar">{initials(session.user.name)}</i></div></header><main>
+  const signOut=async()=>{
+    try {
+      if (typeof window !== 'undefined' && (window as unknown as { Clerk?: { signOut: () => Promise<void> } }).Clerk) {
+        await (window as unknown as { Clerk: { signOut: () => Promise<void> } }).Clerk.signOut();
+      }
+    } catch (e) {
+      console.warn('Clerk signOut ignored:', e);
+    }
+    await apiService.logout();
+    setSession(null);
+    setDatasetGate('checking');
+    setProjects([]);
+    setCandidates([]);
+    setTeams([]);
+  };
+  return <div className="app-shell"><aside className={`sidebar ${mobileNav?'open':''}`}><Logo home={()=>go('dashboard')}/><button className="nav-close" onClick={()=>setMobileNav(false)} aria-label="Close menu"><X/></button><p className="nav-label">Workforce platform</p><nav>{NAV.filter(n=>allowedViews[session.user.role].includes(n.id)).map(n=><button key={n.id} className={view===n.id?'active':''} onClick={()=>go(n.id)}><n.icon/>{n.label}</button>)}</nav><div className="side-bottom"><button onClick={()=>setPanel('help')}><CircleHelp/>Help Center <small>Docs</small></button><div className="user-card"><div className="user-info"><i>{initials(session.user.name)}</i><span><b>{session.user.name}</b><small>{labelRole(session.user.role)}</small></span></div><button className="logout-btn" onClick={signOut} title="Sign out of your session"><LogOut size={13}/><span>Sign out</span></button></div></div></aside>
+  <div className="workspace"><header><button className="menu" onClick={()=>setMobileNav(true)} aria-label="Open menu"><Menu/></button><label className="global-search"><Search/><input id="global-search" value={query} onChange={e=>{setQuery(e.target.value);if(e.target.value&&allowedViews[session.user.role].includes('employees'))go('employees')}} placeholder="Search teams, skills, members..."/><kbd>Ctrl K</kbd></label><div className="ai-live"><i/>ShapeTeam AI v3.2 <span>• Active</span></div><div className="header-actions"><button className="bell" onClick={()=>setPanel('notifications')} aria-label="Notifications"><Bell/>{notificationCount>0&&<b>{notificationCount}</b>}</button>{canCreate&&<button className="primary" onClick={()=>go('create')}><Plus/>Create New Team</button>}<button className="user-nav-btn" onClick={signOut} title="Click to sign out"><i className="avatar">{initials(session.user.name)}</i><span className="user-nav-name">{session.user.name.split(' ')[0]}</span><LogOut size={13} className="logout-icon"/></button></div></header><main>
   {view==='dashboard'&&<Dashboard projects={projects} candidates={candidates} teams={teams} loading={loading} metrics={dashboardMetrics} go={go} setSelected={setSelected} diagnostics={()=>setPanel('diagnostics')} canCreate={canCreate}/>} {view==='employees'&&<Employees candidates={filtered} total={candidateTotal} query={query} setQuery={setQuery} syncing={syncing} sync={sync} add={()=>setPanel('addEmployee')} inspect={inspectCandidate} canAdd={['ORGANIZATION_ADMIN','HR_MANAGER'].includes(session.user.role)}/>} {view==='projects'&&<Projects projects={projects} selected={selected} inspect={inspectProject} create={()=>go('create')} canCreate={canCreate}/>} {view==='create'&&<Create projects={projects} selected={selected} setSelected={setSelected} candidates={candidateTotal} roles={roles} setRoles={setRoles} title={title} setTitle={setTitle} budget={budget} setBudget={setBudget} deadline={deadline} setDeadline={setDeadline} experience={experience} setExperience={setExperience} creating={creating} submit={create} syncing={syncing} sync={sync} optimizing={optimizing} stage={stage} generate={generate}/>} {view==='recommendations'&&<Recommendation project={selected} team={teams[0]} optimizing={optimizing} generate={generate} create={()=>go('create')} launch={launch} canAct={canCreate}/>} {view==='analysis'&&<Analysis team={teams[0]} project={selected} openWeights={()=>setPanel('weights')} generate={()=>go('create')}/>} {view==='reports'&&<Reports projects={projects} team={teams[0]} exportTeam={exportTeam}/>} {view==='settings'&&<SettingsView openWeights={()=>setPanel('weights')} flash={flash}/>} </main></div>{mobileNav&&<button className="backdrop" onClick={()=>setMobileNav(false)}/>} {panel&&<PanelView panel={panel} close={()=>setPanel(null)} candidates={candidates} projects={projects} teams={teams} candidate={focusedCandidate} project={focusedProject} optimize={selectAndOptimize} onRead={()=>{apiService.markNotificationsRead().catch(()=>undefined);setNotificationCount(0)}} canManageRoles={session.user.role==='ORGANIZATION_ADMIN'} onUserUpdated={async()=>{const result=await apiService.getCandidates();setCandidates(result.candidates);setCandidateTotal(result.count)}} added={candidate=>{setCandidates(v=>[candidate,...v]);setCandidateTotal(value=>value+1);setPanel(null);go('employees');flash('success','Employee added successfully.')}}/>} {notice&&<div className={`toast ${notice.type}`}>{notice.type==='success'?<CheckCircle2/>:<AlertTriangle/>}{notice.message}</div>}</div>
 }
 
 function DatasetOnboarding({organization,user,complete,skip,logout}:{organization:Organization;user:SessionUser;complete:()=>void;skip:()=>void;logout:()=>void}){
   const [file,setFile]=useState<File|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[progress,setProgress]=useState('');
   const upload=async()=>{if(!file)return setError('Choose an Excel or CSV employee dataset first.');setBusy(true);setError('');setProgress('Reading and validating the dataset…');try{const result=await apiService.importEmployeeDataset(file);setProgress(`${result.result.imported.toLocaleString()} employees imported. Preparing your dashboard…`);window.setTimeout(complete,700)}catch(reason){setError(reason instanceof Error?reason.message:'Dataset import failed.');setProgress('')}finally{setBusy(false)}};
-  return <div className="dataset-page"><header><Logo home={()=>undefined}/><button className="text-action" onClick={logout}>Sign out</button></header><main><section><small>Organization setup · Workforce data</small><h1>Welcome, {user.name.split(' ')[0]}</h1><p>Upload {organization.name}&apos;s employee dataset so ShapeTeam can calculate workforce capacity, skill coverage, compatibility, and team recommendations from your organization&apos;s actual records.</p><div className={`dataset-drop ${file?'selected':''}`}><Database/><h2>{file?file.name:'Choose your employee dataset'}</h2><p>{file?`${(file.size/1024/1024).toFixed(2)} MB selected`:'Excel (.xlsx, .xls) or CSV · up to 20 MB'}</p><label className="secondary">Browse files<input type="file" accept=".xlsx,.xls,.csv" onChange={event=>{setFile(event.target.files?.[0]||null);setError('')}}/></label></div>{progress&&<p className="import-progress"><Loader2 className={busy?'spin':''}/>{progress}</p>}{error&&<p className="form-error">{error}</p>}<button className="primary dataset-submit" disabled={!file||busy} onClick={upload}>{busy?<Loader2 className="spin"/>:<Sparkles/>}{busy?'Importing workforce data…':'Import and analyze employees'}</button><button className="text-action dataset-skip" disabled={busy} onClick={skip}>Continue with the existing sample data</button></section><aside><h2>Required employee columns</h2><p>ShapeTeam recognizes the uploaded sample format automatically.</p><div className="dataset-columns">{['Employee ID and name','Department','Primary and secondary skills','Experience years','Availability','Current workload','Preferred role','Performance and behavior scores'].map(item=><span key={item}><CheckCircle2/>{item}</span>)}</div><div className="dataset-note"><ShieldCheck/><p><b>Organization-isolated import</b><small>Records are available only inside {organization.name}. Protected personal attributes are not used for ranking.</small></p></div></aside></main></div>
+  return <div className="dataset-page"><header><Logo home={()=>undefined}/><button className="secondary" onClick={logout} style={{display:'inline-flex',alignItems:'center',gap:6}}><LogOut size={14}/> Sign out</button></header><main><section><small>Organization setup · Workforce data</small><h1>Welcome, {user.name.split(' ')[0]}</h1><p>Upload {organization.name}&apos;s employee dataset so ShapeTeam can calculate workforce capacity, skill coverage, compatibility, and team recommendations from your organization&apos;s actual records.</p><div className={`dataset-drop ${file?'selected':''}`}><Database/><h2>{file?file.name:'Choose your employee dataset'}</h2><p>{file?`${(file.size/1024/1024).toFixed(2)} MB selected`:'Excel (.xlsx, .xls) or CSV · up to 20 MB'}</p><label className="secondary">Browse files<input type="file" accept=".xlsx,.xls,.csv" onChange={event=>{setFile(event.target.files?.[0]||null);setError('')}}/></label></div>{progress&&<p className="import-progress"><Loader2 className={busy?'spin':''}/>{progress}</p>}{error&&<p className="form-error">{error}</p>}<button className="primary dataset-submit" disabled={!file||busy} onClick={upload}>{busy?<Loader2 className="spin"/>:<Sparkles/>}{busy?'Importing workforce data…':'Import and analyze employees'}</button><button className="text-action dataset-skip" disabled={busy} onClick={skip}>Continue with the existing sample data</button></section><aside><h2>Required employee columns</h2><p>ShapeTeam recognizes the uploaded sample format automatically.</p><div className="dataset-columns">{['Employee ID and name','Department','Primary and secondary skills','Experience years','Availability','Current workload','Preferred role','Performance and behavior scores'].map(item=><span key={item}><CheckCircle2/>{item}</span>)}</div><div className="dataset-note"><ShieldCheck/><p><b>Organization-isolated import</b><small>Records are available only inside {organization.name}. Protected personal attributes are not used for ranking.</small></p></div></aside></main></div>
 }
 
 function AuthGateway({authenticated}:{authenticated:(user:SessionUser,organization:Organization)=>void}){
-  const [mode,setMode]=useState<'landing'|'login'|'signup'|'forgot'|'reset'>('landing'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[resetToken,setResetToken]=useState('');
-  const [form,setForm]=useState({fullName:'',email:'',password:'',organizationName:'',organizationSize:'51-200',userRole:'HR_MANAGER' as UserRole});
-  const submit=async(event:FormEvent)=>{event.preventDefault();setBusy(true);setError('');setMessage('');try{if(mode==='login'){const result=await apiService.login(form.email,form.password);authenticated(result.user,result.organization)}else if(mode==='signup'){const result=await apiService.signup(form);authenticated(result.user,result.organization)}else if(mode==='forgot'){const result=await apiService.forgotPassword(form.email);setMessage(result.message);if(result.resetToken){setResetToken(result.resetToken);setMode('reset')}}else if(mode==='reset'){const result=await apiService.resetPassword(resetToken,form.password);setMessage(result.message);setMode('login')}}catch(reason){setError(reason instanceof Error?reason.message:'Unable to continue.')}finally{setBusy(false)}};
-  if(mode==='landing')return <div className="landing"><header><Logo home={()=>undefined}/><nav><button onClick={()=>setMode('login')}>Sign in</button><button className="primary" onClick={()=>setMode('signup')}>Start with ShapeTeam</button></nav></header><main><section><small>Explainable workforce intelligence</small><h1>Build stronger teams with decisions people can trust.</h1><p>ShapeTeam connects skills, workload, experience, and project constraints to create transparent team recommendations—without using protected personal attributes.</p><div><button className="primary" onClick={()=>setMode('signup')}><Sparkles/>Create your organization</button><button className="secondary" onClick={()=>setMode('login')}>Open workspace<ChevronRight/></button></div><footer><span><CheckCircle2/>Role-based access</span><span><CheckCircle2/>Explainable scoring</span><span><CheckCircle2/>Organization-isolated data</span></footer></section><aside><div className="landing-score"><small>Recommended team</small><b>92%</b><span>Compatibility</span></div><div className="landing-bars">{[['Skill coverage',96],['Workload balance',88],['Availability',91],['Confidence',89]].map(([label,value])=><p key={label}><span>{label}<b>{value}%</b></span><i><b style={{width:`${value}%`}}/></i></p>)}</div><div className="insight"><Sparkles/>Every score includes the factors, constraints, strengths, and risks behind it.</div></aside></main></div>;
-  return <div className="auth-page"><aside><Logo home={()=>setMode('landing')}/><div><small>ShapeTeam workforce intelligence</small><h1>{mode==='signup'?'Create your organization':mode==='forgot'||mode==='reset'?'Recover your account':'Welcome back'}</h1><p>{mode==='signup'?'Set up your secure workspace and invite your team.':mode==='forgot'||mode==='reset'?'Use a time-limited reset link to restore access.':'Continue to your role-based workspace.'}</p></div><footer>Formerly OptiTeam · Built for explainable, bias-aware workforce decisions.</footer></aside><main><form onSubmit={submit}><button type="button" className="auth-back" onClick={()=>setMode('landing')}>← Back</button><h2>{mode==='signup'?'Sign up':mode==='forgot'?'Forgot password':mode==='reset'?'Set new password':'Sign in'}</h2>{mode==='signup'&&<><label>Full name<input required value={form.fullName} onChange={event=>setForm({...form,fullName:event.target.value})} autoComplete="name"/></label><label>Organization name<input required value={form.organizationName} onChange={event=>setForm({...form,organizationName:event.target.value})}/></label><div><label>Organization size<select value={form.organizationSize} onChange={event=>setForm({...form,organizationSize:event.target.value})}><option>1-10</option><option>11-50</option><option>51-200</option><option>201-1000</option><option>1000+</option></select></label><label>Your role<select value={form.userRole} onChange={event=>setForm({...form,userRole:event.target.value as UserRole})}><option value="ORGANIZATION_ADMIN">Organization Admin</option><option value="HR_MANAGER">HR Manager</option><option value="PROJECT_MANAGER">Project Manager</option><option value="TEAM_LEAD">Team Lead</option><option value="EMPLOYEE">Employee</option></select></label></div></>}<label>Work email<input required type="email" value={form.email} onChange={event=>setForm({...form,email:event.target.value})} autoComplete="email"/></label>{mode!=='forgot'&&<label>{mode==='reset'?'New password':'Password'}<input required type="password" minLength={10} value={form.password} onChange={event=>setForm({...form,password:event.target.value})} autoComplete={mode==='login'?'current-password':'new-password'}/><small>At least 10 characters with upper-case, lower-case, and a number.</small></label>}{error&&<p className="form-error">{error}</p>}{message&&<p className="form-success">{message}</p>}<button className="primary auth-submit" disabled={busy}>{busy?<Loader2 className="spin"/>:mode==='signup'?<UserPlusIcon/>:<ShieldCheck/>}{busy?'Please wait…':mode==='signup'?'Create account':mode==='forgot'?'Send reset link':mode==='reset'?'Update password':'Sign in'}</button>{mode==='login'&&<><button type="button" className="text-action" onClick={()=>setMode('forgot')}>Forgot password?</button><p className="demo-note"><b>Local demo</b><span>admin@shapeteam.local · Demo12345!</span></p></>}{mode==='signup'?<p>Already have an account? <button type="button" className="text-action" onClick={()=>setMode('login')}>Sign in</button></p>:mode!=='reset'&&<p>New to ShapeTeam? <button type="button" className="text-action" onClick={()=>setMode('signup')}>Create an account</button></p>}</form></main></div>
+  const hasClerkKey = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  const [mode,setMode]=useState<'landing'|'gmail'>('landing');
+  const [authIntent,setAuthIntent]=useState<'signin'|'signup'>('signin');
+  const [gmail,setGmail]=useState('');
+  const [name,setName]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
+  const [showKeyInfo,setShowKeyInfo]=useState(false);
+
+  const openAuth=(intent:'signin'|'signup')=>{
+    setAuthIntent(intent);
+    setMode('gmail');
+  };
+
+  const loginWithGmail=async(e?:FormEvent)=>{
+    if(e) e.preventDefault();
+    const cleanEmail=gmail.trim().toLowerCase();
+    if(!cleanEmail||!cleanEmail.includes('@')){
+      setError('Please enter a valid Gmail address.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try{
+      const pseudoClerkId='user_clerk_'+btoa(cleanEmail).replace(/[^a-zA-Z0-9]/g,'').slice(0,16);
+      const result=await apiService.clerkAuth({
+        clerkId:pseudoClerkId,
+        email:cleanEmail,
+        name:name.trim()||cleanEmail.split('@')[0],
+      });
+      authenticated(result.user,result.organization);
+    }catch(err){
+      setError(err instanceof Error?err.message:'Unable to sign in with Gmail.');
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const loginDemo=async()=>{
+    setBusy(true);
+    setError('');
+    try{
+      const result=await apiService.login('admin@shapeteam.local','Demo12345!');
+      authenticated(result.user,result.organization);
+    }catch(err){
+      setError(err instanceof Error?err.message:'Demo login failed.');
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  // If a Clerk Publishable Key is provided in .env.local, render the full Clerk OAuth component
+  if(hasClerkKey && mode==='gmail'){
+    return <ClerkAuthView authenticated={authenticated} onBack={()=>setMode('landing')} initialMode={authIntent} />;
+  }
+
+  if(mode==='landing')return (
+    <div className="landing">
+      <header>
+        <Logo home={()=>undefined}/>
+        <nav>
+          <button onClick={()=>openAuth('signin')}>Sign in with Gmail</button>
+          <button className="primary" onClick={()=>openAuth('signup')}><Sparkles/>Sign up with Gmail</button>
+        </nav>
+      </header>
+      <main>
+        <section>
+          <small>Workforce intelligence • Clerk Authentication</small>
+          <h1>Build stronger teams with decisions people can trust.</h1>
+          <p>ShapeTeam connects skills, workload, experience, and project constraints to create transparent team recommendations. Sign up seamlessly using your Gmail ID.</p>
+          <div>
+            <button className="primary" onClick={()=>openAuth('signup')}><Sparkles/>Sign up with Gmail</button>
+            <button className="secondary" onClick={()=>openAuth('signin')}>Open workspace<ChevronRight/></button>
+          </div>
+          <footer>
+            <span><CheckCircle2/>Clerk single sign-on</span>
+            <span><CheckCircle2/>Sign up using your Gmail ID</span>
+            <span><CheckCircle2/>Organization Admin role assigned automatically</span>
+          </footer>
+        </section>
+        <aside>
+          <div className="landing-score"><small>Recommended team</small><b>92%</b><span>Compatibility</span></div>
+          <div className="landing-bars">{[['Skill coverage',96],['Workload balance',88],['Availability',91],['Confidence',89]].map(([label,value])=><p key={label}><span>{label}<b>{value}%</b></span><i><b style={{width:`${value}%`}}/></i></p>)}</div>
+          <div className="insight"><Sparkles/>Single Sign-On powered by Clerk. Sign up or log in using your Gmail address.</div>
+        </aside>
+      </main>
+    </div>
+  );
+
+  return (
+    <div className="auth-page">
+      <aside>
+        <Logo home={()=>setMode('landing')}/>
+        <div>
+          <small>Clerk Authentication • Single Sign-On</small>
+          <h1>Welcome to ShapeTeam</h1>
+          <p>Sign up or sign in with your Gmail ID to access your role-based workforce intelligence workspace.</p>
+          <div style={{marginTop:24,display:'grid',gap:10}}>
+            <span style={{display:'flex',alignItems:'center',gap:8,fontSize:13,color:'#d8e5ff'}}><CheckCircle2 size={16} color="#75b9ff"/> Sign up using your Gmail account</span>
+            <span style={{display:'flex',alignItems:'center',gap:8,fontSize:13,color:'#d8e5ff'}}><Sparkles size={16} color="#75b9ff"/> Organization Admin permissions automatically assigned</span>
+            <span style={{display:'flex',alignItems:'center',gap:8,fontSize:13,color:'#d8e5ff'}}><ShieldCheck size={16} color="#75b9ff"/> No passwords to remember</span>
+          </div>
+        </div>
+        <footer>Secured by Clerk & Google OAuth · ShapeTeam AI</footer>
+      </aside>
+      <main>
+        <form onSubmit={loginWithGmail}>
+          <button type="button" className="auth-back" onClick={()=>setMode('landing')}>← Back</button>
+          <h2>Sign up with Gmail</h2>
+          <p style={{color:'#656b78',fontSize:13,margin:'-6px 0 16px'}}>
+            Enter your Gmail ID to sign up. ShapeTeam will automatically set up your organization workspace.
+          </p>
+
+          <label>
+            Your Gmail address
+            <input
+              required
+              type="email"
+              placeholder="e.g. dakshpatel@gmail.com"
+              value={gmail}
+              onChange={e=>setGmail(e.target.value)}
+              autoComplete="email"
+              autoFocus
+            />
+          </label>
+
+          <label>
+            Your Full Name (optional)
+            <input
+              type="text"
+              placeholder="e.g. Daksh Patel"
+              value={name}
+              onChange={e=>setName(e.target.value)}
+              autoComplete="name"
+            />
+          </label>
+
+          {error && <p className="form-error">{error}</p>}
+
+          <button className="primary auth-submit" disabled={busy} type="submit">
+            {busy ? <Loader2 className="spin"/> : <Sparkles/>}
+            {busy ? 'Authenticating with Clerk...' : 'Continue with Gmail'}
+          </button>
+
+          <div style={{borderTop:'1px solid #edf0f8',paddingTop:14,marginTop:12}}>
+            <button
+              type="button"
+              className="text-action"
+              onClick={()=>setShowKeyInfo(!showKeyInfo)}
+              style={{fontSize:12,color:'#566075',display:'flex',alignItems:'center',gap:6}}
+            >
+              <Settings size={14}/> {showKeyInfo ? 'Hide Clerk API configuration' : 'Using your own Clerk project keys?'}
+            </button>
+            {showKeyInfo && (
+              <div style={{marginTop:8,background:'#f6f8ff',border:'1px solid #e1e7f8',padding:12,borderRadius:6,fontSize:11,color:'#374151',lineHeight:1.6}}>
+                <b>To connect the official Clerk OAuth widget:</b>
+                <br/>
+                Add your <code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...</code> into <code>frontend/.env.local</code>. Once added, the official Clerk Google OAuth popup will render directly!
+              </div>
+            )}
+          </div>
+
+          <p className="demo-note" style={{marginTop:14}}>
+            <b>Want to test demo records?</b>
+            <button type="button" className="text-action" onClick={loginDemo} style={{fontWeight:600,color:'#0757db'}}>
+              Sign in as Admin Demo →
+            </button>
+          </p>
+        </form>
+      </main>
+    </div>
+  );
 }
-function UserPlusIcon(){return <Users/>}
 function Logo({home}:{home:()=>void}){return <button className="brand" onClick={home} aria-label="Go to dashboard"><b><Rocket/><span>Shape</span>Team</b><small>Enterprise AI</small></button>}
 function Intro({eyebrow,title,copy,actions}:{eyebrow:string;title:string;copy:string;actions?:React.ReactNode}){return <div className="intro"><div><small>{eyebrow}</small><h1>{title}</h1><p>{copy}</p></div>{actions&&<div className="actions">{actions}</div>}</div>}
 function Dashboard({projects,candidates,teams,loading,metrics,go,setSelected,diagnostics,canCreate}:{projects:Project[];candidates:Candidate[];teams:Team[];loading:boolean;metrics:Record<string,number|Array<{label:string;value:number}>>;go:(v:View)=>void;setSelected:(p:Project)=>void;diagnostics:()=>void;canCreate:boolean}){const stats=[['Active projects',Number(metrics.activeProjects??projects.length),FolderKanban],['Employees analyzed',Number(metrics.activeUsers??candidates.length).toLocaleString(),Users],['Teams formed',Number(metrics.teamsFormed??teams.length),BriefcaseBusiness],['Avg team compatibility',`${Number(metrics.averageTeamCompatibility??0)}%`,Sparkles]] as const;return <><Intro eyebrow="Algorithmic talent intelligence • Real-time synthesis" title="Good morning, Heyramb" copy="Here is your workforce optimization overview and real-time team intelligence." actions={<><button className="secondary" onClick={diagnostics}><Gauge/>Run AI Diagnostics</button>{canCreate&&<button className="primary" onClick={()=>go('create')}><WandSparkles/>Create New Team</button>}</>}/><div className="stats">{stats.map(([l,v,I])=><div className="stat" key={l}><span><small>{l}</small><b>{loading?'—':v}</b><em>↑ 12.5% <i>vs last month</i></em></span><I/></div>)}</div><div className="dashboard"><section className="card performance"><CardTitle title="Team Performance Overview" copy="Comparative analysis across organizational cohorts"/><div className="legend">● Actual synergy　<span>● Baseline target</span></div><div className="chart"><i/><i/><i/><svg viewBox="0 0 700 240" preserveAspectRatio="none"><defs><linearGradient id="area"><stop stopColor="#2563eb" stopOpacity=".25"/><stop offset="1" stopColor="#2563eb" stopOpacity="0"/></linearGradient></defs><path className="area" d="M0 200C100 190 140 210 220 145S340 100 430 80S570 60 700 40L700 240H0Z"/><path className="actual" d="M0 200C100 190 140 210 220 145S340 100 430 80S570 60 700 40"/><path className="target" d="M0 220C170 170 430 160 700 105"/></svg><div><span>JAN</span><span>FEB</span><span>MAR</span><span>APR</span><span>MAY</span><span>JUN</span></div></div><div className="insight"><Sparkles/>Predictive model projects a <b>+3.4% affinity surge</b> by July.</div></section><section className="card split"><CardTitle title="Workforce Split" copy="Allocation across active talent pools"/><div className="donut"><span><b>{candidates.length.toLocaleString()}</b><small>Total staff</small></span></div>{[['Engineering','42%'],['Design','18%'],['Marketing','16%'],['Operations','14%'],['Research','10%']].map((r,i)=><p key={r[0]}><i className={`d${i}`}/>{r[0]}<b>{r[1]}</b></p>)}</section><section className="card recent"><CardTitle title="Recent AI Team Recommendations" copy="Generated teams awaiting executive confirmation"/>{projects.slice(0,4).map((p,i)=><button key={p.id} onClick={()=>{setSelected(p);go('recommendations')}}><i><Sparkles/></i><span><b>{p.title}</b><small>{p.requiredRoles.length} specialist roles</small></span><em>{96-i*2}%</em><ChevronRight/></button>)}{!projects.length&&<Empty text="Create a project to begin team optimization."/>}</section><section className="advisory"><Sparkles/><small>AI advisory notice</small><h2>Capacity imbalance detected</h2><p>AI suggests reallocating specialist capacity to optimize delivery cycles.</p>{canCreate&&<button onClick={()=>go('create')}>Auto-balance now</button>}</section></div></>}

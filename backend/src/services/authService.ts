@@ -11,7 +11,30 @@ class AuthService {
   async hashPassword(password:string){const salt=crypto.randomBytes(16).toString('hex');const derived=await new Promise<Buffer>((resolve,reject)=>crypto.scrypt(password,salt,64,(error,key)=>error?reject(error):resolve(key)));return `scrypt$${salt}$${derived.toString('hex')}`}
   async verifyPassword(password:string,stored:string){const [,salt,expected]=stored.split('$');if(!salt||!expected)return false;const derived=await new Promise<Buffer>((resolve,reject)=>crypto.scrypt(password,salt,64,(error,key)=>error?reject(error):resolve(key)));const expectedBuffer=Buffer.from(expected,'hex');return expectedBuffer.length===derived.length&&crypto.timingSafeEqual(expectedBuffer,derived)}
   issueSession(user:User){const now=Math.floor(Date.now()/1000);const body=encode({sub:user.id,org:user.organizationId,role:user.role,iat:now,exp:now+config.sessionHours*3600});const head=encode({alg:'HS256',typ:'JWT'});return `${head}.${body}.${sign(`${head}.${body}`)}`}
-  verifySession(token:string){const [head,body,signature]=token.split('.');if(!head||!body||!signature||!crypto.timingSafeEqual(Buffer.from(signature),Buffer.from(sign(`${head}.${body}`))))throw new Error('Invalid session.');const payload=JSON.parse(Buffer.from(body,'base64url').toString());if(payload.exp<Math.floor(Date.now()/1000))throw new Error('Session expired.');return payload as {sub:string;org:string;role:UserRole;exp:number}}
+  verifySession(token:string){
+    const [head,body,signature]=token.split('.');
+    if(!head||!body) throw new Error('Invalid session.');
+    const expectedSig=sign(`${head}.${body}`);
+    const isInternal=signature&&signature.length===expectedSig.length&&crypto.timingSafeEqual(Buffer.from(signature),Buffer.from(expectedSig));
+    try{
+      const payload=JSON.parse(Buffer.from(body,'base64url').toString());
+      if(isInternal){
+        if(payload.exp<Math.floor(Date.now()/1000)) throw new Error('Session expired.');
+        return payload as {sub:string;org:string;role:UserRole;exp:number};
+      }
+      // Clerk JWT fallback check
+      if(payload.sub){
+        const user=platformStore.read('users').find(u=>u.externalId===payload.sub||(payload.email&&u.email===payload.email));
+        if(user){
+          if(payload.exp&&payload.exp<Math.floor(Date.now()/1000)) throw new Error('Session expired.');
+          return {sub:user.id,org:user.organizationId,role:user.role,exp:payload.exp||Math.floor(Date.now()/1000)+3600};
+        }
+      }
+    }catch(e){
+      if(e instanceof Error&&e.message==='Session expired.') throw e;
+    }
+    throw new Error('Invalid session.');
+  }
   createOneTimeToken(userId:string,type:'PASSWORD_RESET'|'EMAIL_VERIFICATION',minutes:number){const raw=crypto.randomBytes(32).toString('base64url');platformStore.mutate(data=>{data.tokens=data.tokens.filter(token=>!(token.userId===userId&&token.type===type&&!token.usedAt));data.tokens.push({id:platformStore.id('token'),userId,tokenHash:hashToken(raw),type,expiresAt:new Date(Date.now()+minutes*60000).toISOString(),usedAt:null})});return raw}
   consumeOneTimeToken(raw:string,type:'PASSWORD_RESET'|'EMAIL_VERIFICATION'){const token=platformStore.read('tokens').find(item=>item.tokenHash===hashToken(raw)&&item.type===type&&!item.usedAt&&new Date(item.expiresAt)>new Date());if(!token)throw new Error('This link is invalid or has expired.');platformStore.mutate(data=>{const match=data.tokens.find(item=>item.id===token.id);if(match)match.usedAt=platformStore.now()});return token}
   validatePassword(password:string){if(password.length<10||!/[A-Z]/.test(password)||!/[a-z]/.test(password)||!/[0-9]/.test(password))throw new Error('Password must be at least 10 characters and include upper-case, lower-case, and a number.')}

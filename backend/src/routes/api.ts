@@ -4,6 +4,7 @@ import * as platform from '../controllers/platformController';
 import { authenticate, authorize, rateLimit } from '../middleware/auth';
 
 const router=Router();
+router.post('/auth/clerk',rateLimit(30,60_000),auth.clerkAuth);
 router.post('/auth/signup',rateLimit(10,60_000),auth.signup);
 router.post('/auth/login',rateLimit(10,60_000),auth.login);
 router.post('/auth/forgot-password',rateLimit(5,60_000),auth.forgot);

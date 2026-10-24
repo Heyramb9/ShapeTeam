@@ -43,11 +43,12 @@ ml-service/models/*.joblib
 # Dataset (large file - keep locally, mount via Docker)
 ShapeTeam_Dataset.xlsx
 
-# OS files
+# OS & Browser profile files
 .DS_Store
 Thumbs.db
 Desktop.ini
 ~$*
+.edge-preview-profile/
 
 # IDE
 .vscode/settings.json

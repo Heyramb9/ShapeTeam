@@ -7,6 +7,89 @@ import { ROLE_PERMISSIONS, User, UserRole } from '../types/domain';
 const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const roles:UserRole[]=['ORGANIZATION_ADMIN','HR_MANAGER','PROJECT_MANAGER','TEAM_LEAD','EMPLOYEE'];
 const safe=(user:User)=>({...platformStore.sanitizeUser(user),permissions:ROLE_PERMISSIONS[user.role]});
+
+export const clerkAuth=async(req:Request,res:Response)=>{
+  try{
+    const {clerkId,email,name,avatarUrl}=req.body;
+    const normalizedEmail=String(email||'').trim().toLowerCase();
+    if(!normalizedEmail||!clerkId){
+      return res.status(400).json({success:false,message:'Clerk user ID and email are required.'});
+    }
+    let user=platformStore.read('users').find(u=>u.externalId===clerkId||u.email===normalizedEmail);
+    let organization=platformStore.read('organizations')[0];
+    if(!organization){
+      const created=platformStore.createOrganization('Workspace','11-50');
+      organization=created.organization;
+    }
+    const now=platformStore.now();
+    if(!user){
+      const department=platformStore.read('departments').find(d=>d.organizationId===organization.id);
+      user={
+        id:platformStore.id('usr'),
+        organizationId:organization.id,
+        externalId:clerkId,
+        name:String(name||normalizedEmail.split('@')[0]).trim(),
+        email:normalizedEmail,
+        passwordHash:'',
+        role:'ORGANIZATION_ADMIN',
+        departmentId:department?.id||null,
+        jobTitle:'Organization Admin',
+        experienceYears:5,
+        availabilityPercentage:100,
+        currentWorkloadPercentage:0,
+        behaviorScore:92,
+        status:'ACTIVE',
+        profileImage:avatarUrl||null,
+        emailVerified:true,
+        dataSource:'MANUAL',
+        createdAt:now,
+        updatedAt:now
+      };
+      platformStore.mutate(data=>data.users.push(user!));
+      platformStore.audit({
+        organizationId:organization.id,
+        userId:user.id,
+        action:'USER_CLERK_SIGNIN',
+        module:'authentication',
+        entityType:'User',
+        entityId:user.id,
+        metadata:{clerkId,email:normalizedEmail,provider:'google'}
+      });
+    }else{
+      platformStore.mutate(data=>{
+        const existing=data.users.find(u=>u.id===user!.id);
+        if(existing){
+          existing.externalId=clerkId;
+          if(name&&(!existing.name||existing.name===existing.email))existing.name=name;
+          if(avatarUrl)existing.profileImage=avatarUrl;
+          existing.emailVerified=true;
+          existing.status='ACTIVE';
+          existing.updatedAt=now;
+        }
+      });
+      platformStore.audit({
+        organizationId:user.organizationId,
+        userId:user.id,
+        action:'USER_CLERK_LOGIN',
+        module:'authentication',
+        entityType:'User',
+        entityId:user.id,
+        metadata:{clerkId,email:normalizedEmail}
+      });
+    }
+    const userOrg=platformStore.read('organizations').find(item=>item.id===user!.organizationId)||organization;
+    const token=authService.issueSession(user);
+    return res.json({
+      success:true,
+      token,
+      user:safe(user),
+      organization:userOrg
+    });
+  }catch(error){
+    return res.status(500).json({success:false,message:error instanceof Error?error.message:'Clerk authentication failed.'});
+  }
+};
+
 export const signup=async(req:Request,res:Response)=>{try{const {fullName,email,password,organizationName,organizationSize,userRole}=req.body;const normalizedEmail=String(email||'').trim().toLowerCase();if(!String(fullName||'').trim()||!emailPattern.test(normalizedEmail)||!String(organizationName||'').trim()||!String(organizationSize||'').trim())return res.status(400).json({success:false,message:'Full name, a valid work email, organization name, and organization size are required.'});authService.validatePassword(String(password||''));if(platformStore.read('users').some(user=>user.email===normalizedEmail))return res.status(409).json({success:false,message:'An account with this email already exists.'});let organization=platformStore.read('organizations').find(item=>item.name.toLowerCase()===String(organizationName).trim().toLowerCase());let first=false;if(!organization){organization=platformStore.createOrganization(String(organizationName).trim(),String(organizationSize).trim()).organization;first=true}const role:UserRole=first?'ORGANIZATION_ADMIN':roles.includes(userRole)?userRole:'EMPLOYEE';const now=platformStore.now();const passwordHash=await authService.hashPassword(password);const department=platformStore.read('departments').find(item=>item.organizationId===organization!.id);const user:User={id:platformStore.id('usr'),organizationId:organization.id,name:String(fullName).trim(),email:normalizedEmail,passwordHash,role,departmentId:department?.id||null,jobTitle:'',experienceYears:0,availabilityPercentage:100,currentWorkloadPercentage:0,behaviorScore:80,status:'ACTIVE',profileImage:null,emailVerified:false,createdAt:now,updatedAt:now};platformStore.mutate(data=>data.users.push(user));const verificationToken=authService.createOneTimeToken(user.id,'EMAIL_VERIFICATION',1440);platformStore.audit({organizationId:organization.id,userId:user.id,action:'USER_SIGNED_UP',module:'authentication',entityType:'User',entityId:user.id,metadata:{role,firstOrganizationUser:first}});notificationService.create(organization.id,user.id,'EMAIL_VERIFICATION','Verify your work email','Verify your email to secure your ShapeTeam account.');return res.status(201).json({success:true,message:'Account and organization setup completed.',token:authService.issueSession(user),user:safe(user),organization,verificationToken:process.env.NODE_ENV==='production'?undefined:verificationToken})}catch(error){return res.status(400).json({success:false,message:error instanceof Error?error.message:'Unable to create account.'})}};
 export const login=async(req:Request,res:Response)=>{const email=String(req.body.email||'').trim().toLowerCase();const user=platformStore.read('users').find(item=>item.email===email);if(!user||!await authService.verifyPassword(String(req.body.password||''),user.passwordHash))return res.status(401).json({success:false,message:'Email or password is incorrect.'});if(user.status!=='ACTIVE')return res.status(403).json({success:false,message:'This account is not active.'});platformStore.audit({organizationId:user.organizationId,userId:user.id,action:'USER_LOGGED_IN',module:'authentication',entityType:'User',entityId:user.id,metadata:{}});return res.json({success:true,token:authService.issueSession(user),user:safe(user),organization:platformStore.read('organizations').find(item=>item.id===user.organizationId)})};
 export const me=(req:Request,res:Response)=>res.json({success:true,user:safe(req.user!),organization:platformStore.read('organizations').find(item=>item.id===req.user!.organizationId)});
