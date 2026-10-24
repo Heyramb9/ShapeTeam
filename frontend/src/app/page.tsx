@@ -25,7 +25,28 @@ export default function ShapeTeam(){
   const [focusedCandidate,setFocusedCandidate]=useState<Candidate|null>(null),[focusedProject,setFocusedProject]=useState<Project|null>(null),[notificationCount,setNotificationCount]=useState(3);
   const [dashboardMetrics,setDashboardMetrics]=useState<Record<string,number|Array<{label:string;value:number}>>>({});
   const [title,setTitle]=useState(''),[budget,setBudget]=useState('150'),[deadline,setDeadline]=useState('12'),[experience,setExperience]=useState('3'),[roles,setRoles]=useState<string[]>([]),[creating,setCreating]=useState(false);
-  useEffect(()=>{const expired=()=>{setSession(null);setSessionLoading(false)};window.addEventListener('shapeteam:session-expired',expired);if(!apiService.getToken())setSessionLoading(false);else apiService.getMe().then(({user,organization})=>setSession({user,organization})).catch(()=>apiService.setToken(null)).finally(()=>setSessionLoading(false));return()=>window.removeEventListener('shapeteam:session-expired',expired)},[]);
+  useEffect(()=>{
+    const expired=()=>{setSession(null);setSessionLoading(false)};
+    window.addEventListener('shapeteam:session-expired',expired);
+    const watchdog=window.setTimeout(()=>setSessionLoading(false),2500);
+    const token=apiService.getToken();
+    if(!token){
+      setSessionLoading(false);
+      window.clearTimeout(watchdog);
+    }else{
+      apiService.getMe()
+        .then(({user,organization})=>setSession({user,organization}))
+        .catch(()=>apiService.setToken(null))
+        .finally(()=>{
+          window.clearTimeout(watchdog);
+          setSessionLoading(false);
+        });
+    }
+    return()=>{
+      window.clearTimeout(watchdog);
+      window.removeEventListener('shapeteam:session-expired',expired);
+    };
+  },[]);
   useEffect(()=>{if(!session){setDatasetGate('checking');return}setDatasetGate('checking');apiService.getDatasetStatus().then(status=>setDatasetGate(status.required&&['ORGANIZATION_ADMIN','HR_MANAGER'].includes(session.user.role)?'required':'ready')).catch(()=>setDatasetGate('ready'))},[session]);
   useEffect(()=>{if(!session||datasetGate!=='ready')return;setLoading(true);Promise.allSettled([apiService.getProjects(),apiService.getCandidates(),apiService.getNotifications(),apiService.dashboard()]).then(([p,c,n,d])=>{if(p.status==='fulfilled'&&p.value.success){setProjects(p.value.projects);setSelected(p.value.projects[0]||null)}if(c.status==='fulfilled'&&c.value.success){setCandidates(c.value.candidates);setCandidateTotal(c.value.count)}if(n.status==='fulfilled')setNotificationCount(n.value.unread);if(d.status==='fulfilled')setDashboardMetrics(d.value.metrics);setLoading(false)})},[session,datasetGate,dataVersion]);
   useEffect(()=>{if(!selected){setTeams([]);return}setTeams([]);apiService.getProjectById(selected.id).then(r=>r.success&&setTeams(r.teams||[])).catch(()=>setTeams([]))},[selected]);
@@ -41,9 +62,9 @@ export default function ShapeTeam(){
   const generate=async()=>{if(!selected)return flash('error','Select a project first.');if(!candidates.length)return flash('error','Sync the employee dataset before optimizing.');setOptimizing(true);try{setStage(1);await new Promise(r=>setTimeout(r,450));setStage(2);await new Promise(r=>setTimeout(r,450));setStage(3);const r=await apiService.generateTeam(selected.id);setTeams(v=>[r.team,...v.filter(t=>t.id!==r.team.id)]);setView('recommendations');flash('success',r.fromCache?'Recommendation loaded from cache.':'Optimal team recommendation generated.')}catch(e){flash('error',e instanceof Error?e.message:'Optimization failed.')}finally{setOptimizing(false);setStage(0)}};
   const launch=async()=>{const team=teams[0],recommendation=team?.recommendation;if(!recommendation)return flash('error','Generate or select a recommendation first.');try{const result=session?.user.role==='ORGANIZATION_ADMIN'&&recommendation.status==='PENDING_APPROVAL'?await apiService.reviewRecommendation(recommendation.id,'approve','Approved in ShapeTeam review.'):await apiService.submitRecommendation(recommendation.id);setTeams(current=>current.map(item=>item.id===team.id?{...item,status:result.recommendation.status,recommendation:result.recommendation}:item));flash('success',result.message)}catch(error){flash('error',error instanceof Error?error.message:'Unable to update recommendation.')}};
   const filtered=useMemo(()=>{const q=query.toLowerCase();return candidates.filter(c=>[c.fullName,c.role,...c.skills].join(' ').toLowerCase().includes(q))},[candidates,query]);
-  if(sessionLoading)return <div className="session-loader"><Loader2 className="spin"/><b>Loading ShapeTeam</b></div>;
+  if(sessionLoading)return <div className="session-loader" style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'14px',background:'#f8f9ff',color:'#00134b',fontFamily:'system-ui, -apple-system, sans-serif'}}><Loader2 className="spin" style={{width:36,height:36,color:'#0757db',animation:'spin 1s linear infinite'}}/><b style={{fontSize:'15px',fontWeight:600}}>Loading ShapeTeam...</b></div>;
   if(!session)return <AuthGateway authenticated={(user,organization)=>setSession({user,organization})}/>;
-  if(datasetGate==='checking')return <div className="session-loader"><Loader2 className="spin"/><b>Checking workforce data</b></div>;
+  if(datasetGate==='checking')return <div className="session-loader" style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'14px',background:'#f8f9ff',color:'#00134b',fontFamily:'system-ui, -apple-system, sans-serif'}}><Loader2 className="spin" style={{width:36,height:36,color:'#0757db',animation:'spin 1s linear infinite'}}/><b style={{fontSize:'15px',fontWeight:600}}>Checking workforce data...</b></div>;
   if(datasetGate==='required')return <DatasetOnboarding organization={session.organization} user={session.user} complete={()=>{setDatasetGate('ready');setDataVersion(value=>value+1)}} skip={()=>setDatasetGate('ready')} logout={async()=>{await apiService.logout();setSession(null)}}/>;
   const allowedViews:Record<UserRole,View[]>={ORGANIZATION_ADMIN:['dashboard','create','projects','employees','analysis','recommendations','reports','settings'],HR_MANAGER:['dashboard','create','projects','employees','analysis','recommendations','reports'],PROJECT_MANAGER:['dashboard','create','projects','employees','analysis','recommendations','reports'],TEAM_LEAD:['dashboard','projects','analysis','recommendations'],EMPLOYEE:['dashboard','projects','analysis']};
   const canCreate=['ORGANIZATION_ADMIN','HR_MANAGER','PROJECT_MANAGER'].includes(session.user.role);
