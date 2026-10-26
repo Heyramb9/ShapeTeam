@@ -29,6 +29,21 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'ShapeTeam core service is healthy.' });
 });
 
+// Root welcome / status endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    service: 'ShapeTeam Core Backend API',
+    version: '1.0.0',
+    healthy: true,
+    message: 'ShapeTeam backend is live and operational.',
+    documentation: {
+      health: '/health',
+      api: '/api'
+    }
+  });
+});
+
 // Mount main API routes
 // Keep the service-prefixed path available when deployed behind Vercel Services.
 app.use('/api/backend', apiRouter);
