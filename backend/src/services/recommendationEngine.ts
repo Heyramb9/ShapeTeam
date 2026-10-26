@@ -6,13 +6,53 @@ const normalize=(value:string)=>value.trim().toLowerCase().replace(/[_-]+/g,' ')
 export interface ScoredCandidate { user:User; role:string; scores:ScoreBreakdown; reason:string; coveredSkills:string[]; missingSkills:string[] }
 export interface TeamCandidate { members:ScoredCandidate[]; compatibilityScore:number; skillCoverageScore:number; workloadBalanceScore:number; availabilityScore:number; diversityScore:number; confidenceScore:number; strengths:string[]; risks:string[]; missingSkills:string[]; explanation:string; suggestedAction:string }
 
+export interface GenerateOptions {
+  regenerate?: boolean;
+  cycle?: number;
+  currentMemberIds?: string[];
+  excludeTeamIds?: string[];
+}
+
 class RecommendationEngine {
   private score(user:User,requirement:ProjectRequirement,configuration:AIConfiguration,data:PlatformData,linksByUser:Map<string,typeof data.userSkills>):ScoredCandidate{
     const skillById=new Map(data.skills.map(skill=>[skill.id,skill]));const userSkills=(linksByUser.get(user.id)||[]).map(item=>({link:item,skill:skillById.get(item.skillId)})).filter(item=>item.skill);
     let weighted=0,possible=0;const covered:string[]=[],missing:string[]=[];
     for(const required of requirement.requiredSkills){const importance=Math.max(1,required.importance||1);possible+=importance*100;const match=userSkills.find(item=>normalize(item.skill!.name)===normalize(required.name));if(match){const proficiency=Math.min(100,(match.link.proficiencyLevel/5)*70+Math.min(30,match.link.yearsOfExperience*5));weighted+=importance*proficiency;covered.push(required.name)}else if(required.required)missing.push(required.name)}
-    const titleMatch=normalize(user.jobTitle).includes(normalize(requirement.roleName))||normalize(requirement.roleName).split(' ').some(part=>part.length>3&&normalize(user.jobTitle).includes(part));
-    const skillMatch=requirement.requiredSkills.length?clamp(weighted/Math.max(1,possible)*100):titleMatch?90:60;
+    const roleNorm=normalize(requirement.roleName);
+    const jobNorm=normalize(user.jobTitle);
+    const roleAliases:Record<string,string[]>={
+      developer:['developer','software','frontend','backend','fullstack','programmer','web','code'],
+      designer:['designer','ui','ux','product design','visual'],
+      devops:['devops','sre','infrastructure','platform','reliability'],
+      'team lead':['lead','manager','architect','principal','head'],
+      'product analyst':['product','analyst','analytics','product designer','business analyst'],
+      'ml engineer':['ml','machine learning','ai','data science','deep learning'],
+      'cloud engineer':['cloud','aws','azure','gcp','infrastructure'],
+      'qa engineer':['qa','quality','test','tester','automation'],
+      tester:['test','tester','qa','quality'],
+      'data analyst':['data','analyst','analytics','bi','statistics']
+    };
+    let isRoleMatch=false;
+    if(jobNorm===roleNorm){
+      isRoleMatch=true;
+    }else{
+      for(const [key,aliases] of Object.entries(roleAliases)){
+        if(roleNorm.includes(key)||key.includes(roleNorm)){
+          if(aliases.some(alias=>jobNorm.includes(alias))){
+            isRoleMatch=true;
+            break;
+          }
+        }
+      }
+    }
+    if(!isRoleMatch){
+      const stopWords=new Set(['engineer','specialist','lead','manager','senior','junior','staff','analyst','designer']);
+      const roleParts=roleNorm.split(' ').filter(part=>part.length>2&&!stopWords.has(part));
+      if(roleParts.length>0&&roleParts.some(part=>jobNorm.includes(part))){
+        isRoleMatch=true;
+      }
+    }
+    const skillMatch=requirement.requiredSkills.length?clamp(weighted/Math.max(1,possible)*100):isRoleMatch?90:60;
     const performance=Number(user.metadata?.performanceRating||0);const history=Number(user.metadata?.pastProjects||0);const experienceBase=requirement.minimumExperience<=0?100:clamp(user.experienceYears/requirement.minimumExperience*100);const experienceScore=clamp(experienceBase*.8+(performance?performance*20*.12:12)+(history?Math.min(100,history*4)*.08:8));
     const behaviorScore=clamp(user.behaviorScore);
     const workloadScore=clamp(100-user.currentWorkloadPercentage-(user.currentWorkloadPercentage>=configuration.maximumWorkload?30:0));
@@ -22,9 +62,98 @@ class RecommendationEngine {
     const usedFallback=!(roleAligned&&importedSuitability);const reason=`${Math.round(skillMatch)}% skill match, ${Math.round(experienceScore)}% experience match, ${Math.round(availabilityScore)}% availability alignment, and ${Math.round(workloadScore)}% remaining-capacity score. ${usedFallback?'Decision-tree confidence uses the transparent deterministic fallback.':'Decision-tree confidence uses the imported dataset prediction.'}`;
     return{user,role:requirement.roleName,scores:{skillMatch,experienceScore,behaviorScore,workloadScore,availabilityScore,decisionTreeConfidence,roleSuitability,usedFallback},reason,coveredSkills:covered,missingSkills:missing}
   }
-  generate(project:Project,limit=3):TeamCandidate[]{const data=platformStore.snapshot();const requirements=data.requirements.filter(item=>item.projectId===project.id);if(!requirements.length)throw new Error('Add at least one project role before generating a team.');if(requirements.length>project.requiredTeamSize)throw new Error('Required roles exceed the project team-size limit.');const configuration=data.aiConfigurations.find(item=>item.organizationId===project.organizationId);if(!configuration)throw new Error('AI configuration is missing.');const weightTotal=configuration.skillMatchWeight+configuration.experienceWeight+configuration.behaviorWeight+configuration.workloadWeight+configuration.availabilityWeight+configuration.decisionTreeWeight;if(Math.abs(weightTotal-100)>.001)throw new Error('AI scoring weights must total 100%.');const users=data.users.filter(user=>user.organizationId===project.organizationId&&user.status==='ACTIVE'&&user.role!=='ORGANIZATION_ADMIN');const linksByUser=new Map<string,typeof data.userSkills>();for(const link of data.userSkills){const list=linksByUser.get(link.userId)||[];list.push(link);linksByUser.set(link.userId,list)}const pools=requirements.map(requirement=>users.map(user=>this.score(user,requirement,configuration,data,linksByUser)).filter(candidate=>candidate.user.currentWorkloadPercentage<Math.min(requirement.workloadLimit,configuration.maximumWorkload)&&candidate.user.availabilityPercentage>=requirement.availabilityRequirement&&candidate.missingSkills.length===0).sort((a,b)=>b.scores.roleSuitability-a.scores.roleSuitability).slice(0,8));const missingIndex=pools.findIndex(pool=>!pool.length);if(missingIndex>=0)throw new Error(`Insufficient candidates for ${requirements[missingIndex].roleName}. Check required skills, availability, and workload limits.`);
-    const combinations:ScoredCandidate[][]=[];const dfs=(depth:number,members:ScoredCandidate[],used:Set<string>)=>{if(combinations.length>5000)return;if(depth===pools.length){combinations.push([...members]);return}for(const candidate of pools[depth]){if(used.has(candidate.user.id))continue;used.add(candidate.user.id);members.push(candidate);dfs(depth+1,members,used);members.pop();used.delete(candidate.user.id)}};dfs(0,[],new Set());if(!combinations.length)throw new Error('No feasible team can fill every required role with unique employees.');
-    return combinations.map(members=>this.summarize(members,configuration)).sort((a,b)=>b.compatibilityScore-a.compatibilityScore).slice(0,Math.max(1,Math.min(limit,5)))}
+  generate(project:Project,limit=3,options?:GenerateOptions):TeamCandidate[]{
+    const data=platformStore.snapshot();
+    const requirements=data.requirements.filter(item=>item.projectId===project.id);
+    if(!requirements.length)throw new Error('Add at least one project role before generating a team.');
+    if(requirements.length>project.requiredTeamSize)throw new Error('Required roles exceed the project team-size limit.');
+    const configuration=data.aiConfigurations.find(item=>item.organizationId===project.organizationId);
+    if(!configuration)throw new Error('AI configuration is missing.');
+    const weightTotal=configuration.skillMatchWeight+configuration.experienceWeight+configuration.behaviorWeight+configuration.workloadWeight+configuration.availabilityWeight+configuration.decisionTreeWeight;
+    if(Math.abs(weightTotal-100)>.001)throw new Error('AI scoring weights must total 100%.');
+    const users=data.users.filter(user=>user.organizationId===project.organizationId&&user.status==='ACTIVE'&&user.role!=='ORGANIZATION_ADMIN');
+    const linksByUser=new Map<string,typeof data.userSkills>();
+    for(const link of data.userSkills){const list=linksByUser.get(link.userId)||[];list.push(link);linksByUser.set(link.userId,list)}
+    const pools=requirements.map(requirement=>users.map(user=>this.score(user,requirement,configuration,data,linksByUser)).filter(candidate=>candidate.user.currentWorkloadPercentage<Math.min(requirement.workloadLimit,configuration.maximumWorkload)&&candidate.user.availabilityPercentage>=requirement.availabilityRequirement&&candidate.missingSkills.length===0).sort((a,b)=>b.scores.roleSuitability-a.scores.roleSuitability).slice(0,8));
+    const missingIndex=pools.findIndex(pool=>!pool.length);
+    if(missingIndex>=0)throw new Error(`Insufficient candidates for ${requirements[missingIndex].roleName}. Check required skills, availability, and workload limits.`);
+    const combinations:ScoredCandidate[][]=[];
+    const dfs=(depth:number,members:ScoredCandidate[],usedIds:Set<string>,usedNames:Set<string>)=>{
+      if(combinations.length>5000)return;
+      if(depth===pools.length){combinations.push([...members]);return}
+      for(const candidate of pools[depth]){
+        const normName=candidate.user.name.toLowerCase().trim();
+        if(usedIds.has(candidate.user.id)||usedNames.has(normName))continue;
+        usedIds.add(candidate.user.id);
+        usedNames.add(normName);
+        members.push(candidate);
+        dfs(depth+1,members,usedIds,usedNames);
+        members.pop();
+        usedNames.delete(normName);
+        usedIds.delete(candidate.user.id);
+      }
+    };
+    dfs(0,[],new Set(),new Set());
+    if(!combinations.length)throw new Error('No feasible team can fill every required role with unique employees.');
+
+    const allSummarized=combinations.map(members=>this.summarize(members,configuration)).sort((a,b)=>b.compatibilityScore-a.compatibilityScore);
+    const rosterKey=(c:TeamCandidate)=>c.members.map(m=>m.user.name.toLowerCase().trim()).sort().join('|');
+    const seen=new Set<string>();
+    const uniqueRosters:TeamCandidate[]=[];
+    for(const cand of allSummarized){
+      const key=rosterKey(cand);
+      if(!seen.has(key)){
+        seen.add(key);
+        uniqueRosters.push(cand);
+      }
+    }
+
+    const isRegenerate=Boolean(options?.regenerate||(typeof options?.cycle==='number'&&options.cycle>0));
+    const currentMemberIds=options?.currentMemberIds||[];
+    const currentIdSet=new Set(currentMemberIds);
+    const currentNameSet=new Set<string>();
+    for(const u of data.users){
+      if(currentIdSet.has(u.id)){
+        currentNameSet.add(u.name.toLowerCase().trim());
+      }
+    }
+
+    let pool=uniqueRosters;
+    if(isRegenerate){
+      const candidates=uniqueRosters.filter(c=>{
+        if(currentIdSet.size>0&&c.members.every(m=>currentIdSet.has(m.user.id)))return false;
+        if(currentNameSet.size>0&&c.members.every(m=>currentNameSet.has(m.user.name.toLowerCase().trim())))return false;
+        return true;
+      });
+
+      if(candidates.length>0){
+        pool=candidates.map(c=>{
+          let overlap=0;
+          for(const m of c.members){
+            if(currentIdSet.has(m.user.id)||currentNameSet.has(m.user.name.toLowerCase().trim())){
+              overlap++;
+            }
+          }
+          return {candidate:c,overlap};
+        }).sort((a,b)=>{
+          if(a.overlap!==b.overlap)return a.overlap-b.overlap;
+          return b.candidate.compatibilityScore-a.candidate.compatibilityScore;
+        }).map(item=>item.candidate);
+      }else if(uniqueRosters.length>1){
+        pool=uniqueRosters.slice(1);
+      }
+    }
+
+    const cycle=(typeof options?.cycle==='number'&&options.cycle>0)?options.cycle:1;
+    const primaryIndex=isRegenerate?((cycle-1)%pool.length):0;
+
+    const finalCandidates:TeamCandidate[]=[];
+    const needed=Math.max(1,Math.min(limit,pool.length));
+    for(let i=0;i<needed;i++){
+      finalCandidates.push(pool[(primaryIndex+i)%pool.length]);
+    }
+    return finalCandidates;
+  }
   private summarize(members:ScoredCandidate[],configuration:AIConfiguration):TeamCandidate{const average=(values:number[])=>values.reduce((sum,value)=>sum+value,0)/Math.max(1,values.length);const skillCoverageScore=clamp(average(members.map(item=>item.scores.skillMatch)));const workloadBalanceScore=clamp(average(members.map(item=>item.scores.workloadScore)));const availabilityScore=clamp(average(members.map(item=>item.scores.availabilityScore)));const experienceSpread=new Set(members.map(item=>Math.floor(item.user.experienceYears/3))).size;const departmentSpread=new Set(members.map(item=>item.user.departmentId).filter(Boolean)).size;const diversityScore=clamp(70+Math.min(15,experienceSpread*5)+Math.min(15,departmentSpread*5));const confidenceScore=clamp(average(members.map(item=>item.scores.decisionTreeConfidence)));const roleAverage=average(members.map(item=>item.scores.roleSuitability));const compatibilityScore=clamp(roleAverage*.55+skillCoverageScore*.15+workloadBalanceScore*.12+availabilityScore*.1+diversityScore*.08);const missingSkills=[...new Set(members.flatMap(item=>item.missingSkills))];const strengths:string[]=[];const risks:string[]=[];if(skillCoverageScore>=90)strengths.push('Strong required-skill coverage across every assigned role');if(workloadBalanceScore>=70)strengths.push('Balanced workload distribution within configured limits');if(availabilityScore>=85)strengths.push('High availability alignment for the project timeline');if(average(members.map(item=>item.scores.experienceScore))>=85)strengths.push('Strong experience match for project priority');for(const member of members)if(member.user.currentWorkloadPercentage>=configuration.maximumWorkload-15)risks.push(`${member.user.name} is close to the workload limit`);if(skillCoverageScore<85)risks.push('Some role skills meet only the minimum acceptable coverage');if(!risks.length)risks.push('No hard-constraint risks detected; confirm collaboration expectations during kickoff');const fallbackCount=members.filter(item=>item.scores.usedFallback).length;const predictionNote=fallbackCount===members.length?'Decision-tree confidence uses the transparent deterministic fallback.':fallbackCount===0?'Decision-tree confidence uses the imported dataset predictions.':`Decision-tree confidence uses imported predictions where role-aligned and the deterministic fallback for ${fallbackCount} assignment${fallbackCount===1?'':'s'}.`;const explanation=`This team was recommended because it provides ${Math.round(skillCoverageScore)}% skill coverage, maintains an average workload score of ${Math.round(workloadBalanceScore)}%, fills all ${members.length} required roles, and has an overall compatibility score of ${Math.round(compatibilityScore)}%. ${predictionNote}`;return{members,compatibilityScore,skillCoverageScore,workloadBalanceScore,availabilityScore,diversityScore,confidenceScore,strengths,risks,missingSkills,explanation,suggestedAction:'Approve the recommendation or review the next ranked alternative.'}}
 }
 export const recommendationEngine=new RecommendationEngine();
